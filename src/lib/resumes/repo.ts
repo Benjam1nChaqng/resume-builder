@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   bullet,
@@ -10,6 +10,126 @@ import {
   skill,
 } from "@/lib/db/resume-schema";
 import type { ParsedResume } from "@/lib/ai/resume-importer/schema";
+import type {
+  BulletPatch,
+  ContactInfoPatch,
+  EducationPatch,
+  ExperiencePatch,
+  ProjectPatch,
+  ResumePatch,
+  SkillPatch,
+} from "./schemas";
+
+async function touchResume(resumeId: string): Promise<void> {
+  await db
+    .update(resume)
+    .set({ updatedAt: new Date() })
+    .where(eq(resume.id, resumeId));
+}
+
+export async function updateResumeRow(
+  resumeId: string,
+  patch: ResumePatch,
+): Promise<void> {
+  if (Object.keys(patch).length === 0) return;
+  await db
+    .update(resume)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(eq(resume.id, resumeId));
+}
+
+export async function updateContactInfoRow(
+  resumeId: string,
+  patch: ContactInfoPatch,
+): Promise<void> {
+  if (Object.keys(patch).length === 0) return;
+  await db
+    .update(contactInfo)
+    .set(patch)
+    .where(eq(contactInfo.resumeId, resumeId));
+  await touchResume(resumeId);
+}
+
+export async function updateExperienceRow(
+  resumeId: string,
+  experienceId: string,
+  patch: ExperiencePatch,
+): Promise<void> {
+  if (Object.keys(patch).length === 0) return;
+  await db
+    .update(experience)
+    .set(patch)
+    .where(and(eq(experience.id, experienceId), eq(experience.resumeId, resumeId)));
+  await touchResume(resumeId);
+}
+
+export async function updateBulletRow(
+  resumeId: string,
+  bulletId: string,
+  patch: BulletPatch,
+): Promise<void> {
+  if (Object.keys(patch).length === 0) return;
+  await db
+    .update(bullet)
+    .set(patch)
+    .where(
+      and(
+        eq(bullet.id, bulletId),
+        inArray(
+          bullet.experienceId,
+          db
+            .select({ id: experience.id })
+            .from(experience)
+            .where(eq(experience.resumeId, resumeId)),
+        ),
+      ),
+    );
+  await touchResume(resumeId);
+}
+
+export async function updateEducationRow(
+  resumeId: string,
+  educationId: string,
+  patch: EducationPatch,
+): Promise<void> {
+  if (Object.keys(patch).length === 0) return;
+  const { gpa, ...rest } = patch;
+  const dbPatch = {
+    ...rest,
+    ...(gpa !== undefined && { gpa: gpa === null ? null : String(gpa) }),
+  };
+  await db
+    .update(education)
+    .set(dbPatch)
+    .where(and(eq(education.id, educationId), eq(education.resumeId, resumeId)));
+  await touchResume(resumeId);
+}
+
+export async function updateSkillRow(
+  resumeId: string,
+  skillId: string,
+  patch: SkillPatch,
+): Promise<void> {
+  if (Object.keys(patch).length === 0) return;
+  await db
+    .update(skill)
+    .set(patch)
+    .where(and(eq(skill.id, skillId), eq(skill.resumeId, resumeId)));
+  await touchResume(resumeId);
+}
+
+export async function updateProjectRow(
+  resumeId: string,
+  projectId: string,
+  patch: ProjectPatch,
+): Promise<void> {
+  if (Object.keys(patch).length === 0) return;
+  await db
+    .update(project)
+    .set(patch)
+    .where(and(eq(project.id, projectId), eq(project.resumeId, resumeId)));
+  await touchResume(resumeId);
+}
 
 export async function insertResumeWithRelations({
   userId,
