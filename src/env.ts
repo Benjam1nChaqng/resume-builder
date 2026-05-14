@@ -8,6 +8,7 @@ export const env = createEnv({
     BETTER_AUTH_URL: z.string().url().optional(),
     ANTHROPIC_API_KEY: z.string().min(1),
     HELICONE_API_KEY: z.string().min(1),
+    BLOB_READ_WRITE_TOKEN: z.string().min(1),
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   },
   client: {
@@ -19,6 +20,7 @@ export const env = createEnv({
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
     HELICONE_API_KEY: process.env.HELICONE_API_KEY,
+    BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
     NEXT_PUBLIC_BETTER_AUTH_URL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL,
     NODE_ENV: process.env.NODE_ENV,
   },

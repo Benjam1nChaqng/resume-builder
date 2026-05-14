@@ -1,0 +1,33 @@
+import { randomUUID } from "node:crypto";
+import { put } from "@vercel/blob";
+import { importResume, type ImportInput } from "@/lib/ai/resume-importer";
+import { insertResumeWithRelations } from "./repo";
+
+export type CreateResumeInput =
+  | { kind: "text"; content: string }
+  | { kind: "pdf"; file: File };
+
+export async function createResumeForUser({
+  userId,
+  input,
+}: {
+  userId: string;
+  input: CreateResumeInput;
+}): Promise<string> {
+  let sourcePdfUrl: string | null = null;
+  let importerInput: ImportInput;
+
+  if (input.kind === "pdf") {
+    const ext = input.file.name.split(".").pop()?.toLowerCase() ?? "pdf";
+    const key = `pdfs/${userId}/${randomUUID()}.${ext}`;
+    const blob = await put(key, input.file, { access: "public" });
+    sourcePdfUrl = blob.url;
+    importerInput = { kind: "pdf", pdfUrl: blob.url };
+  } else {
+    importerInput = { kind: "text", content: input.content };
+  }
+
+  const parsed = await importResume(importerInput);
+
+  return insertResumeWithRelations({ userId, parsed, sourcePdfUrl });
+}

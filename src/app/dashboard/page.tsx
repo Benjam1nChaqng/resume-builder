@@ -1,6 +1,11 @@
 import { headers } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { desc, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { resume } from "@/lib/db/resume-schema";
+import { ImportResumeButton } from "@/components/import-resume-button";
 import { SignOutButton } from "@/components/sign-out-button";
 
 export default async function DashboardPage() {
@@ -10,20 +15,74 @@ export default async function DashboardPage() {
     redirect("/sign-in");
   }
 
+  const resumes = await db
+    .select({
+      id: resume.id,
+      title: resume.title,
+      isDefault: resume.isDefault,
+      updatedAt: resume.updatedAt,
+    })
+    .from(resume)
+    .where(eq(resume.userId, session.user.id))
+    .orderBy(desc(resume.updatedAt));
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-white px-6 text-center dark:bg-neutral-950">
-      <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl dark:text-neutral-50">
-        Welcome, {session.user.name}
-      </h1>
-      <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-400">
-        {session.user.email}
-      </p>
-      <div className="mt-8">
-        <SignOutButton />
+    <main className="min-h-screen bg-white px-6 py-16 dark:bg-neutral-950">
+      <div className="mx-auto max-w-2xl">
+        <header className="flex items-baseline justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-50">
+              Welcome, {session.user.name}
+            </h1>
+            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+              {session.user.email}
+            </p>
+          </div>
+          <SignOutButton />
+        </header>
+
+        <section className="mt-12">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-medium text-neutral-900 dark:text-neutral-50">
+              Resumes
+            </h2>
+            <ImportResumeButton />
+          </div>
+
+          {resumes.length === 0 ? (
+            <div className="mt-6 rounded-lg border border-dashed border-neutral-300 px-6 py-12 text-center dark:border-neutral-800">
+              <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                No resume yet — import one to get started.
+              </p>
+            </div>
+          ) : (
+            <ul className="mt-6 divide-y divide-neutral-200 rounded-lg border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+              {resumes.map((r) => (
+                <li key={r.id}>
+                  <Link
+                    href={`/resume/${r.id}`}
+                    className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-900"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="font-medium text-neutral-900 dark:text-neutral-50">
+                        {r.title}
+                      </span>
+                      {r.isDefault && (
+                        <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
+                          default
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-xs text-neutral-400 dark:text-neutral-600">
+                      {new Date(r.updatedAt).toLocaleDateString()}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
-      <p className="mt-12 text-xs uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-600">
-        Day 1 — Dashboard placeholder
-      </p>
     </main>
   );
 }
