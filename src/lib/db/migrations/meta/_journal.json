@@ -8,6 +8,13 @@
       "when": 1778784745209,
       "tag": "0000_amazing_terrax",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778790161943,
+      "tag": "0001_square_riptide",
+      "breakpoints": true
     }
   ]
 }

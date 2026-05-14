@@ -6,3 +6,4 @@
 - 2026-05-14: shadcn/ui initialized (Neutral, CSS variables). Components installed: button, input, label, card. `cn` helper at `src/lib/utils.ts`.
 - 2026-05-14: Auth UI — `/sign-up`, `/sign-in` (client forms, shadcn Card), `/dashboard` (server-gated by `auth.api.getSession`). Session-aware landing page. `SignOutButton` client component.
 - 2026-05-14: Anthropic SDK + Helicone proxy scaffold. `src/lib/ai/anthropic.ts` exposes `getAnthropic()` (lazy), `src/lib/ai/models.ts` defines PLANNER (opus-4-7) / EXECUTOR (sonnet-4-6) / REVIEWER / CHEAP. Env adds `ANTHROPIC_API_KEY`, `HELICONE_API_KEY`.
+- 2026-05-14: Phase 2 / Chunk 2 — v0.1 Drizzle schema. `src/lib/db/resume-schema.ts` adds resume, contact_info, experience, bullet, education, skill, project tables with text IDs (`crypto.randomUUID`), `timestamp({ withTimezone: true })`, cascade-on-delete FKs, FK indexes, and full relations. Migration `0001_square_riptide.sql`.
