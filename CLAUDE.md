@@ -41,7 +41,12 @@ This project serves three purposes:
 - After every meaningful change, add a one-line entry to CHANGELOG.md with the date.
 
 ## Current phase
-Day 1 — initial scaffolding. No business logic, no database, no AI yet. Goal: Next.js running locally, pushed to GitHub.
+Day 1 — scaffolding complete. Next.js app deployed to Vercel; auth (Better Auth + Drizzle/Neon) wired; Anthropic SDK + Helicone proxy scaffolded; shadcn/ui initialized with sign-in/sign-up/dashboard pages. No business logic (resume scoring, JD scraping, agent loops) yet — that's Day 2+.
+
+## Live URLs
+- **Production:** https://resume-builder-benjaminchang918-7029s-projects.vercel.app
+- **GitHub:** https://github.com/Benjam1nChaqng/resume-builder
+- **Vercel project:** `benjaminchang918-7029s-projects/resume-builder`
 
 ## Owner
 GitHub: Benjam1nChaqng
