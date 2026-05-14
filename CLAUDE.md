@@ -17,7 +17,7 @@ This project serves three purposes:
 - Neon (Postgres + pgvector) for database
 - Drizzle ORM
 - Claude Agent SDK (TypeScript) for the agentic backbone
-- Anthropic SDK: Claude Opus 4.7 (planner/reviewer) + Sonnet 4.6 (executor)
+- Anthropic SDK: Opus 4.7 for planner/reviewer and for low-volume v0.1 executor tasks (e.g. ResumeImporter); Sonnet 4.6 becomes the executor default once cost matters (high-volume tailoring/critique work in v0.2+).
 - MCP servers (TypeScript SDK) for custom integrations
 - Vercel for deployment, Cloudflare Workers for MCP servers
 - Helicone proxy for LLM observability
