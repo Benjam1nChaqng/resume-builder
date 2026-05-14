@@ -7,7 +7,7 @@ An agentic resume builder. Not a form with GPT calls — a system that imports a
 1. User signs up (already built — Better Auth)
 2. User lands on /dashboard, sees "No resume yet — import one"
 3. User clicks "Import resume" → modal with PDF upload OR plain text paste
-4. On submit, Claude extracts structured data (Opus 4.7 with vision for PDFs, Sonnet 4.6 for text)
+4. On submit, Claude extracts structured data (Opus 4.7 for both PDF-via-vision and text paths in v0.1; revisit a cheaper Sonnet-based text path when import volume justifies the dual eval surface)
 5. User is redirected to /resume/[id] showing their parsed resume
 6. User can edit any field inline. Field edits save on blur (no debounced autosave in v0.1 — keeps the UX state machine simple).
 7. User can create additional resumes (different versions)
@@ -44,7 +44,7 @@ Out of scope for v0.1: AI tailoring, JD scraping, rubric critique, ATS scoring, 
 - **Timestamps:** Postgres `TIMESTAMP WITH TIME ZONE` everywhere. In Drizzle that's `timestamp({ withTimezone: true })` — `timestamp()` alone defaults to *without* time zone.
 
 ## Agent Architecture (high-level)
-- ResumeImporter agent (Chunk 3): takes PDF or text → returns structured resume JSON matching the data model. Uses Opus 4.7 with vision for PDFs, Sonnet 4.6 for text. Validates output with Zod.
+- ResumeImporter agent (Chunk 3): takes PDF or text → returns structured resume JSON matching the data model. Uses Opus 4.7 for both paths in v0.1 (vision for PDFs, plain text for paste). Validates output with Zod.
 - JDScraperAgent (v0.2): URL → structured JobDescription
 - BulletTailorer (v0.2): (Experience + JD) → tailored bullets
 - RubricCritic (v0.3): 3 parallel subagents (Recruiter, ATS, HiringManager) → 5-dim scored critique
