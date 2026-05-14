@@ -6,6 +6,21 @@ import { auth } from "@/lib/auth";
 import { createResumeForUser } from "@/lib/resumes/create";
 import { requireResumeAccess } from "@/lib/resumes/access";
 import {
+  addBulletRow,
+  addEducationRow,
+  addExperienceRow,
+  addProjectRow,
+  addSkillRow,
+  deleteBulletRow,
+  deleteEducationRow,
+  deleteExperienceRow,
+  deleteProjectRow,
+  deleteSkillRow,
+  reorderBulletsRow,
+  reorderEducationsRow,
+  reorderExperiencesRow,
+  reorderProjectsRow,
+  reorderSkillsRow,
   updateBulletRow,
   updateContactInfoRow,
   updateEducationRow,
@@ -131,4 +146,125 @@ export async function updateProjectAction(
   await requireResumeAccess(resumeId);
   const validated = ProjectPatchSchema.parse(patch);
   await updateProjectRow(resumeId, projectId, validated);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Add — appends a new row at the end of the list, returns its id
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function addBulletAction(
+  resumeId: string,
+  experienceId: string,
+): Promise<string> {
+  await requireResumeAccess(resumeId);
+  return addBulletRow(resumeId, experienceId);
+}
+
+export async function addExperienceAction(resumeId: string): Promise<string> {
+  await requireResumeAccess(resumeId);
+  return addExperienceRow(resumeId);
+}
+
+export async function addEducationAction(resumeId: string): Promise<string> {
+  await requireResumeAccess(resumeId);
+  return addEducationRow(resumeId);
+}
+
+export async function addSkillAction(resumeId: string): Promise<string> {
+  await requireResumeAccess(resumeId);
+  return addSkillRow(resumeId);
+}
+
+export async function addProjectAction(resumeId: string): Promise<string> {
+  await requireResumeAccess(resumeId);
+  return addProjectRow(resumeId);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Delete — FK cascade handles children
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function deleteBulletAction(
+  resumeId: string,
+  bulletId: string,
+): Promise<void> {
+  await requireResumeAccess(resumeId);
+  await deleteBulletRow(resumeId, bulletId);
+}
+
+export async function deleteExperienceAction(
+  resumeId: string,
+  experienceId: string,
+): Promise<void> {
+  await requireResumeAccess(resumeId);
+  await deleteExperienceRow(resumeId, experienceId);
+}
+
+export async function deleteEducationAction(
+  resumeId: string,
+  educationId: string,
+): Promise<void> {
+  await requireResumeAccess(resumeId);
+  await deleteEducationRow(resumeId, educationId);
+}
+
+export async function deleteSkillAction(
+  resumeId: string,
+  skillId: string,
+): Promise<void> {
+  await requireResumeAccess(resumeId);
+  await deleteSkillRow(resumeId, skillId);
+}
+
+export async function deleteProjectAction(
+  resumeId: string,
+  projectId: string,
+): Promise<void> {
+  await requireResumeAccess(resumeId);
+  await deleteProjectRow(resumeId, projectId);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reorder — orderedIds must be a permutation of existing children
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function reorderBulletsAction(
+  resumeId: string,
+  experienceId: string,
+  orderedIds: string[],
+): Promise<void> {
+  await requireResumeAccess(resumeId);
+  await reorderBulletsRow(resumeId, experienceId, orderedIds);
+}
+
+export async function reorderExperiencesAction(
+  resumeId: string,
+  orderedIds: string[],
+): Promise<void> {
+  await requireResumeAccess(resumeId);
+  await reorderExperiencesRow(resumeId, orderedIds);
+}
+
+export async function reorderEducationsAction(
+  resumeId: string,
+  orderedIds: string[],
+): Promise<void> {
+  await requireResumeAccess(resumeId);
+  await reorderEducationsRow(resumeId, orderedIds);
+}
+
+export async function reorderSkillsAction(
+  resumeId: string,
+  orderedIds: string[],
+): Promise<void> {
+  await requireResumeAccess(resumeId);
+  await reorderSkillsRow(resumeId, orderedIds);
+}
+
+export async function reorderProjectsAction(
+  resumeId: string,
+  orderedIds: string[],
+): Promise<void> {
+  await requireResumeAccess(resumeId);
+  await reorderProjectsRow(resumeId, orderedIds);
 }

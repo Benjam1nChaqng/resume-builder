@@ -1,7 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
 import {
+  addBulletAction,
+  addEducationAction,
+  addExperienceAction,
+  addProjectAction,
+  addSkillAction,
+  deleteBulletAction,
+  deleteEducationAction,
+  deleteExperienceAction,
+  deleteProjectAction,
+  deleteSkillAction,
+  reorderBulletsAction,
+  reorderEducationsAction,
+  reorderExperiencesAction,
+  reorderProjectsAction,
+  reorderSkillsAction,
   updateBulletAction,
   updateContactInfoAction,
   updateEducationAction,
@@ -14,6 +31,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { EditableDate } from "@/components/editable-date";
 import { EditableText } from "@/components/editable-text";
 import type { ContactLink } from "@/lib/ai/resume-importer/schema";
+import { cn } from "@/lib/utils";
 
 type ResumeEditorData = {
   id: string;
@@ -57,10 +75,79 @@ type ResumeEditorData = {
 const sectionLabel =
   "text-xs font-medium uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-600";
 const fieldGray = "text-neutral-600 dark:text-neutral-400";
-const fieldHeading =
-  "font-medium text-neutral-900 dark:text-neutral-50";
+const fieldHeading = "font-medium text-neutral-900 dark:text-neutral-50";
+
+function ItemControls({
+  canUp,
+  canDown,
+  onUp,
+  onDown,
+  onDelete,
+  className,
+}: {
+  canUp: boolean;
+  canDown: boolean;
+  onUp: () => void;
+  onDown: () => void;
+  onDelete: () => void;
+  className?: string;
+}) {
+  const btn =
+    "inline-flex size-6 items-center justify-center rounded text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 disabled:opacity-30 disabled:hover:bg-transparent dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100";
+  return (
+    <div
+      className={cn(
+        "flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100",
+        className,
+      )}
+    >
+      <button type="button" onClick={onUp} disabled={!canUp} className={btn} aria-label="Move up">
+        <ChevronUp className="size-4" />
+      </button>
+      <button type="button" onClick={onDown} disabled={!canDown} className={btn} aria-label="Move down">
+        <ChevronDown className="size-4" />
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        className={cn(btn, "hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400")}
+        aria-label="Delete"
+      >
+        <X className="size-4" />
+      </button>
+    </div>
+  );
+}
+
+function AddButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-dashed border-neutral-300 px-3 py-1.5 text-xs text-neutral-500 transition-colors hover:border-neutral-400 hover:bg-neutral-50 hover:text-neutral-700 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-neutral-600 dark:hover:bg-neutral-900 dark:hover:text-neutral-200"
+    >
+      <Plus className="size-3.5" />
+      {label}
+    </button>
+  );
+}
 
 export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
+  const router = useRouter();
+
+  function moveItem<T extends { id: string }>(items: readonly T[], index: number, dir: -1 | 1): string[] {
+    const newOrder = [...items];
+    const j = index + dir;
+    [newOrder[index], newOrder[j]] = [newOrder[j]!, newOrder[index]!];
+    return newOrder.map((it) => it.id);
+  }
+
+  async function withRefresh<T>(fn: () => Promise<T>): Promise<T> {
+    const result = await fn();
+    router.refresh();
+    return result;
+  }
+
   return (
     <main className="min-h-screen bg-white px-6 py-16 dark:bg-neutral-950">
       <div className="mx-auto max-w-2xl space-y-12">
@@ -75,10 +162,7 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
             ariaLabel="Resume title"
             className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-50"
           />
-          <Link
-            href="/dashboard"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
+          <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "sm" })}>
             ← Dashboard
           </Link>
         </header>
@@ -100,25 +184,19 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
               <EditableText
                 value={resume.contactInfo.email}
                 placeholder="email@example.com"
-                onSave={async (next) =>
-                  updateContactInfoAction(resume.id, { email: next })
-                }
+                onSave={async (next) => updateContactInfoAction(resume.id, { email: next })}
                 ariaLabel="Email"
               />
               <EditableText
                 value={resume.contactInfo.phone}
                 placeholder="Phone"
-                onSave={async (next) =>
-                  updateContactInfoAction(resume.id, { phone: next })
-                }
+                onSave={async (next) => updateContactInfoAction(resume.id, { phone: next })}
                 ariaLabel="Phone"
               />
               <EditableText
                 value={resume.contactInfo.location}
                 placeholder="Location"
-                onSave={async (next) =>
-                  updateContactInfoAction(resume.id, { location: next })
-                }
+                onSave={async (next) => updateContactInfoAction(resume.id, { location: next })}
                 ariaLabel="Location"
               />
             </div>
@@ -141,12 +219,12 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
           </section>
         )}
 
-        {resume.experiences.length > 0 && (
-          <section>
-            <h2 className={sectionLabel}>Experience</h2>
+        <section>
+          <h2 className={sectionLabel}>Experience</h2>
+          {resume.experiences.length > 0 && (
             <ul className="mt-4 space-y-6">
-              {resume.experiences.map((exp) => (
-                <li key={exp.id}>
+              {resume.experiences.map((exp, expIdx) => (
+                <li key={exp.id} className="group relative">
                   <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-[1fr_auto]">
                     <EditableText
                       value={exp.role}
@@ -174,6 +252,24 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
                         }
                         ariaLabel="End date"
                         disabled={exp.current}
+                      />
+                      <ItemControls
+                        canUp={expIdx > 0}
+                        canDown={expIdx < resume.experiences.length - 1}
+                        onUp={() =>
+                          withRefresh(() =>
+                            reorderExperiencesAction(resume.id, moveItem(resume.experiences, expIdx, -1)),
+                          )
+                        }
+                        onDown={() =>
+                          withRefresh(() =>
+                            reorderExperiencesAction(resume.id, moveItem(resume.experiences, expIdx, 1)),
+                          )
+                        }
+                        onDelete={() =>
+                          withRefresh(() => deleteExperienceAction(resume.id, exp.id))
+                        }
+                        className="ml-2"
                       />
                     </div>
                   </div>
@@ -207,6 +303,7 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
                             current: next,
                             ...(next ? { endDate: null } : {}),
                           });
+                          router.refresh();
                         }}
                       />
                       Current
@@ -214,8 +311,8 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
                   </div>
                   {exp.bullets.length > 0 && (
                     <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-neutral-700 dark:text-neutral-300">
-                      {exp.bullets.map((b) => (
-                        <li key={b.id}>
+                      {exp.bullets.map((b, bIdx) => (
+                        <li key={b.id} className="group/bullet flex items-start gap-2">
                           <EditableText
                             value={b.text}
                             multiline
@@ -225,23 +322,58 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
                               await updateBulletAction(resume.id, b.id, { text: next });
                             }}
                             ariaLabel="Bullet"
+                            className="flex-1"
+                          />
+                          <ItemControls
+                            canUp={bIdx > 0}
+                            canDown={bIdx < exp.bullets.length - 1}
+                            onUp={() =>
+                              withRefresh(() =>
+                                reorderBulletsAction(
+                                  resume.id,
+                                  exp.id,
+                                  moveItem(exp.bullets, bIdx, -1),
+                                ),
+                              )
+                            }
+                            onDown={() =>
+                              withRefresh(() =>
+                                reorderBulletsAction(
+                                  resume.id,
+                                  exp.id,
+                                  moveItem(exp.bullets, bIdx, 1),
+                                ),
+                              )
+                            }
+                            onDelete={() =>
+                              withRefresh(() => deleteBulletAction(resume.id, b.id))
+                            }
+                            className="opacity-0 group-hover/bullet:opacity-100"
                           />
                         </li>
                       ))}
                     </ul>
                   )}
+                  <AddButton
+                    label="Add bullet"
+                    onClick={() => withRefresh(() => addBulletAction(resume.id, exp.id))}
+                  />
                 </li>
               ))}
             </ul>
-          </section>
-        )}
+          )}
+          <AddButton
+            label="Add experience"
+            onClick={() => withRefresh(() => addExperienceAction(resume.id))}
+          />
+        </section>
 
-        {resume.educations.length > 0 && (
-          <section>
-            <h2 className={sectionLabel}>Education</h2>
+        <section>
+          <h2 className={sectionLabel}>Education</h2>
+          {resume.educations.length > 0 && (
             <ul className="mt-4 space-y-4">
-              {resume.educations.map((ed) => (
-                <li key={ed.id}>
+              {resume.educations.map((ed, edIdx) => (
+                <li key={ed.id} className="group">
                   <div className="grid grid-cols-1 gap-x-4 sm:grid-cols-[1fr_auto]">
                     <EditableText
                       value={ed.school}
@@ -268,6 +400,24 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
                           updateEducationAction(resume.id, ed.id, { endDate: next })
                         }
                         ariaLabel="End date"
+                      />
+                      <ItemControls
+                        canUp={edIdx > 0}
+                        canDown={edIdx < resume.educations.length - 1}
+                        onUp={() =>
+                          withRefresh(() =>
+                            reorderEducationsAction(resume.id, moveItem(resume.educations, edIdx, -1)),
+                          )
+                        }
+                        onDown={() =>
+                          withRefresh(() =>
+                            reorderEducationsAction(resume.id, moveItem(resume.educations, edIdx, 1)),
+                          )
+                        }
+                        onDelete={() =>
+                          withRefresh(() => deleteEducationAction(resume.id, ed.id))
+                        }
+                        className="ml-2"
                       />
                     </div>
                   </div>
@@ -310,21 +460,23 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
                 </li>
               ))}
             </ul>
-          </section>
-        )}
+          )}
+          <AddButton
+            label="Add education"
+            onClick={() => withRefresh(() => addEducationAction(resume.id))}
+          />
+        </section>
 
-        {resume.skills.length > 0 && (
-          <section>
-            <h2 className={sectionLabel}>Skills</h2>
+        <section>
+          <h2 className={sectionLabel}>Skills</h2>
+          {resume.skills.length > 0 && (
             <ul className="mt-4 space-y-2 text-sm">
-              {resume.skills.map((s) => (
-                <li key={s.id} className="flex items-baseline gap-3">
+              {resume.skills.map((s, sIdx) => (
+                <li key={s.id} className="group flex items-baseline gap-3">
                   <EditableText
                     value={s.category}
                     placeholder="Category (optional)"
-                    onSave={async (next) =>
-                      updateSkillAction(resume.id, s.id, { category: next })
-                    }
+                    onSave={async (next) => updateSkillAction(resume.id, s.id, { category: next })}
                     ariaLabel="Skill category"
                     className={`w-32 shrink-0 ${fieldGray}`}
                   />
@@ -336,20 +488,39 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
                     }}
                     emptyAsNull={false}
                     ariaLabel="Skill name"
-                    className="text-neutral-700 dark:text-neutral-300"
+                    className="flex-1 text-neutral-700 dark:text-neutral-300"
+                  />
+                  <ItemControls
+                    canUp={sIdx > 0}
+                    canDown={sIdx < resume.skills.length - 1}
+                    onUp={() =>
+                      withRefresh(() =>
+                        reorderSkillsAction(resume.id, moveItem(resume.skills, sIdx, -1)),
+                      )
+                    }
+                    onDown={() =>
+                      withRefresh(() =>
+                        reorderSkillsAction(resume.id, moveItem(resume.skills, sIdx, 1)),
+                      )
+                    }
+                    onDelete={() => withRefresh(() => deleteSkillAction(resume.id, s.id))}
                   />
                 </li>
               ))}
             </ul>
-          </section>
-        )}
+          )}
+          <AddButton
+            label="Add skill"
+            onClick={() => withRefresh(() => addSkillAction(resume.id))}
+          />
+        </section>
 
-        {resume.projects.length > 0 && (
-          <section>
-            <h2 className={sectionLabel}>Projects</h2>
+        <section>
+          <h2 className={sectionLabel}>Projects</h2>
+          {resume.projects.length > 0 && (
             <ul className="mt-4 space-y-4">
-              {resume.projects.map((p) => (
-                <li key={p.id}>
+              {resume.projects.map((p, pIdx) => (
+                <li key={p.id} className="group">
                   <div className="flex items-baseline gap-3">
                     <EditableText
                       value={p.name}
@@ -364,31 +535,46 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
                     <EditableText
                       value={p.link}
                       placeholder="https://..."
-                      onSave={async (next) =>
-                        updateProjectAction(resume.id, p.id, { link: next })
-                      }
+                      onSave={async (next) => updateProjectAction(resume.id, p.id, { link: next })}
                       ariaLabel="Project link"
-                      className={`text-sm ${fieldGray}`}
+                      className={`flex-1 text-sm ${fieldGray}`}
+                    />
+                    <ItemControls
+                      canUp={pIdx > 0}
+                      canDown={pIdx < resume.projects.length - 1}
+                      onUp={() =>
+                        withRefresh(() =>
+                          reorderProjectsAction(resume.id, moveItem(resume.projects, pIdx, -1)),
+                        )
+                      }
+                      onDown={() =>
+                        withRefresh(() =>
+                          reorderProjectsAction(resume.id, moveItem(resume.projects, pIdx, 1)),
+                        )
+                      }
+                      onDelete={() => withRefresh(() => deleteProjectAction(resume.id, p.id))}
                     />
                   </div>
                   <EditableText
                     value={p.description}
                     multiline
                     placeholder="Description"
-                    onSave={async (next) =>
-                      updateProjectAction(resume.id, p.id, { description: next })
-                    }
+                    onSave={async (next) => updateProjectAction(resume.id, p.id, { description: next })}
                     ariaLabel="Project description"
                     className="text-sm text-neutral-700 dark:text-neutral-300"
                   />
                 </li>
               ))}
             </ul>
-          </section>
-        )}
+          )}
+          <AddButton
+            label="Add project"
+            onClick={() => withRefresh(() => addProjectAction(resume.id))}
+          />
+        </section>
 
         <footer className="border-t border-neutral-200 pt-4 text-xs text-neutral-400 dark:border-neutral-800 dark:text-neutral-600">
-          Edits save automatically when you tab or click away.
+          Edits save when you tab away. Hover an item to reorder or delete.
         </footer>
       </div>
     </main>
