@@ -4,19 +4,19 @@ import {
   ForbiddenError,
   UnauthorizedError,
 } from "@/lib/access-errors";
-import { loadResumeOwner } from "./owner";
+import { loadJobOwner } from "./owner";
 
 export { UnauthorizedError, ForbiddenError };
 
-export async function requireResumeAccess(
-  resumeId: string,
+export async function requireJobAccess(
+  jobId: string,
 ): Promise<{ userId: string }> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     throw new UnauthorizedError();
   }
 
-  const ownerUserId = await loadResumeOwner(resumeId);
+  const ownerUserId = await loadJobOwner(jobId);
   if (!ownerUserId || ownerUserId !== session.user.id) {
     throw new ForbiddenError();
   }
