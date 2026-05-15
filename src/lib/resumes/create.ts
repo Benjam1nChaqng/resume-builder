@@ -20,7 +20,7 @@ export async function createResumeForUser({
   if (input.kind === "pdf") {
     const ext = input.file.name.split(".").pop()?.toLowerCase() ?? "pdf";
     const key = `pdfs/${userId}/${randomUUID()}.${ext}`;
-    const blob = await put(key, input.file, { access: "public" });
+    const blob = await put(key, input.file, { access: "private" });
     sourcePdfUrl = blob.url;
     importerInput = { kind: "pdf", pdfUrl: blob.url };
   } else {

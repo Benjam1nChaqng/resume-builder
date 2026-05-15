@@ -79,7 +79,7 @@ describe("createResumeForUser", () => {
     const [key, payload, opts] = mockBlobPut.mock.calls[0];
     expect(key).toMatch(/^pdfs\/user-1\/.+\.pdf$/);
     expect(payload).toBe(file);
-    expect(opts).toMatchObject({ access: "public" });
+    expect(opts).toMatchObject({ access: "private" });
 
     expect(mockImportResume).toHaveBeenCalledWith({
       kind: "pdf",

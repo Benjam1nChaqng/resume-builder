@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { get } from "@vercel/blob";
 import { getAnthropic } from "@/lib/ai/anthropic";
 import { MODELS } from "@/lib/ai/models";
 import { ParsedResumeSchema, type ParsedResume } from "./schema";
@@ -19,21 +20,48 @@ export type ImportInput =
   | { kind: "text"; content: string }
   | { kind: "pdf"; pdfUrl: string };
 
+async function fetchPrivatePdfAsBase64(pdfUrl: string): Promise<string> {
+  const response = await get(pdfUrl, { access: "private" });
+  if (!response) {
+    throw new Error(`ResumeImporter: PDF blob not found at ${pdfUrl}`);
+  }
+  if (response.statusCode !== 200 || !response.stream) {
+    throw new Error(
+      `ResumeImporter: unexpected blob response (status=${response.statusCode})`,
+    );
+  }
+  const bytes = await new Response(response.stream).arrayBuffer();
+  return Buffer.from(bytes).toString("base64");
+}
+
 export async function importResume(input: ImportInput): Promise<ParsedResume> {
   const anthropic = getAnthropic();
 
-  const userContent =
-    input.kind === "pdf"
-      ? ([
-          { type: "document", source: { type: "url", url: input.pdfUrl } },
-          { type: "text", text: "Extract this resume into structured JSON via the extract_resume tool." },
-        ] as const)
-      : ([
-          {
-            type: "text",
-            text: `Extract this resume into structured JSON via the extract_resume tool.\n\n--- RESUME TEXT ---\n${input.content}`,
-          },
-        ] as const);
+  let userContent;
+  if (input.kind === "pdf") {
+    const data = await fetchPrivatePdfAsBase64(input.pdfUrl);
+    userContent = [
+      {
+        type: "document",
+        source: {
+          type: "base64",
+          media_type: "application/pdf",
+          data,
+        },
+      },
+      {
+        type: "text",
+        text: "Extract this resume into structured JSON via the extract_resume tool.",
+      },
+    ] as const;
+  } else {
+    userContent = [
+      {
+        type: "text",
+        text: `Extract this resume into structured JSON via the extract_resume tool.\n\n--- RESUME TEXT ---\n${input.content}`,
+      },
+    ] as const;
+  }
 
   const inputSchema = z.toJSONSchema(ParsedResumeSchema);
 
