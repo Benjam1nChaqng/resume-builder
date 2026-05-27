@@ -21,13 +21,6 @@ function fakeBlobResponse(bytes: Uint8Array) {
         controller.close();
       },
     }),
-    headers: new Headers(),
-    blob: {
-      url: "https://blob.example.com/x.pdf",
-      pathname: "x.pdf",
-      contentType: "application/pdf",
-      size: bytes.byteLength,
-    } as never,
   };
 }
 
@@ -94,7 +87,7 @@ describe("importResume", () => {
   });
 
   it("fetches the PDF from private Blob storage and sends base64 bytes (not a URL) to Claude", async () => {
-    const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]); // "%PDF-1.4"
+    const pdfBytes = new Uint8Array([1, 2, 3, 4]);
     mockBlobGet.mockResolvedValueOnce(fakeBlobResponse(pdfBytes));
     mockCreate.mockResolvedValueOnce(toolUseResponse(validResumeFixture));
 
@@ -109,6 +102,7 @@ describe("importResume", () => {
     const call = mockCreate.mock.calls[0][0];
     const userContent = call.messages[0].content as Array<{
       type: string;
+      text?: string;
       source?: { type: string; media_type?: string; data?: string };
     }>;
     const doc = userContent.find((c) => c.type === "document");
@@ -118,6 +112,8 @@ describe("importResume", () => {
       media_type: "application/pdf",
       data: Buffer.from(pdfBytes).toString("base64"),
     });
+    const text = userContent.find((c) => c.type === "text");
+    expect(text?.text).toMatch(/extract_resume/);
   });
 
   it("throws when the private Blob is not found (get returns null)", async () => {

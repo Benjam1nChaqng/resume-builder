@@ -37,31 +37,28 @@ async function fetchPrivatePdfAsBase64(pdfUrl: string): Promise<string> {
 export async function importResume(input: ImportInput): Promise<ParsedResume> {
   const anthropic = getAnthropic();
 
-  let userContent;
-  if (input.kind === "pdf") {
-    const data = await fetchPrivatePdfAsBase64(input.pdfUrl);
-    userContent = [
-      {
-        type: "document",
-        source: {
-          type: "base64",
-          media_type: "application/pdf",
-          data,
-        },
-      },
-      {
-        type: "text",
-        text: "Extract this resume into structured JSON via the extract_resume tool.",
-      },
-    ] as const;
-  } else {
-    userContent = [
-      {
-        type: "text",
-        text: `Extract this resume into structured JSON via the extract_resume tool.\n\n--- RESUME TEXT ---\n${input.content}`,
-      },
-    ] as const;
-  }
+  const userContent =
+    input.kind === "pdf"
+      ? ([
+          {
+            type: "document",
+            source: {
+              type: "base64",
+              media_type: "application/pdf",
+              data: await fetchPrivatePdfAsBase64(input.pdfUrl),
+            },
+          },
+          {
+            type: "text",
+            text: "Extract this resume into structured JSON via the extract_resume tool.",
+          },
+        ] as const)
+      : ([
+          {
+            type: "text",
+            text: `Extract this resume into structured JSON via the extract_resume tool.\n\n--- RESUME TEXT ---\n${input.content}`,
+          },
+        ] as const);
 
   const inputSchema = z.toJSONSchema(ParsedResumeSchema);
 
