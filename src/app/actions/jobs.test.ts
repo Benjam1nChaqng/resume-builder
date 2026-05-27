@@ -29,6 +29,29 @@ vi.mock("@/lib/jobs/tailor", () => ({
   tailorResumeForJob: mockTailorResumeForJob,
 }));
 
+vi.mock("@/lib/jobs/discovery", () => ({
+  JobSearchProfileInputSchema: { parse: vi.fn((value) => value) },
+  JobSourceInputSchema: { parse: vi.fn((value) => value) },
+}));
+
+vi.mock("@/lib/jobs/discovery-repo", () => ({
+  createJobSearchProfile: vi.fn(),
+  createJobSourceForUser: vi.fn(),
+  updateListingStatusForUser: vi.fn(),
+}));
+
+vi.mock("@/lib/jobs/fit", () => ({
+  runResumeJobFit: vi.fn(),
+}));
+
+vi.mock("@/lib/jobs/run-discovery", () => ({
+  runJobDiscovery: vi.fn(),
+}));
+
+vi.mock("@/lib/jobs/tailored-resume", () => ({
+  createTailoredResumeCopy: vi.fn(),
+}));
+
 beforeEach(() => {
   mockGetSession.mockReset();
   mockCreateJobForUser.mockReset();
