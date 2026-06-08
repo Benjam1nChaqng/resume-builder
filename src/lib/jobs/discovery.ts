@@ -22,25 +22,33 @@ export const JobSearchFiltersSchema = z.object({
   internship: z.boolean().default(false),
 });
 
+export const EMPLOYMENT_TYPES = ["any", "full_time", "part_time"] as const;
+export const JOB_FOCUSES = ["both", "local", "professional"] as const;
+
+export type EmploymentType = (typeof EMPLOYMENT_TYPES)[number];
+export type JobFocus = (typeof JOB_FOCUSES)[number];
+
 export const JobSearchProfileInputSchema = z.object({
   candidateName: z.string().trim().min(1),
   targetRoles: z.array(z.string().trim().min(1)).min(1),
   locationPreference: z.string().trim().nullable().default(null),
   remotePreference: z.enum(["any", "remote", "hybrid", "onsite"]).default("any"),
   experienceLevel: z.string().trim().nullable().default(null),
+  employmentType: z.enum(EMPLOYMENT_TYPES).default("any"),
+  salaryMin: z.number().int().nonnegative().nullable().default(null),
+  jobFocus: z.enum(JOB_FOCUSES).default("both"),
   keywords: z.array(z.string().trim().min(1)).default([]),
   exclusions: z.array(z.string().trim().min(1)).default([]),
-  basicJobFilters: JobSearchFiltersSchema.default({
-    partTime: false,
-    hourly: false,
-    entryLevel: false,
-    retail: false,
-    admin: false,
-    service: false,
-    warehouse: false,
-    internship: false,
-  }),
 });
+
+/** The fields the search-link and job-feed builders care about. */
+export type SearchCriteria = {
+  roles: string[];
+  location: string | null;
+  employmentType: EmploymentType;
+  salaryMin: number | null;
+  jobFocus: JobFocus;
+};
 
 export const JobSourceInputSchema = z.object({
   profileId: z.string().min(1),

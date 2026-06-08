@@ -32,24 +32,29 @@ describe("job discovery helpers", () => {
     ]);
   });
 
-  it("validates search profile inputs with basic-job filters", () => {
+  it("validates search profile inputs and applies sensible defaults", () => {
     const parsed = JobSearchProfileInputSchema.parse({
       candidateName: "Maya",
       targetRoles: ["barista"],
-      basicJobFilters: {
-        partTime: true,
-        hourly: true,
-        entryLevel: true,
-        retail: false,
-        admin: false,
-        service: true,
-        warehouse: false,
-        internship: false,
-      },
+      employmentType: "part_time",
+      salaryMin: 45000,
+      jobFocus: "local",
     });
 
-    expect(parsed.remotePreference).toBe("any");
-    expect(parsed.basicJobFilters.partTime).toBe(true);
+    expect(parsed.employmentType).toBe("part_time");
+    expect(parsed.salaryMin).toBe(45000);
+    expect(parsed.jobFocus).toBe("local");
+  });
+
+  it("defaults employment type, salary, and focus when omitted", () => {
+    const parsed = JobSearchProfileInputSchema.parse({
+      candidateName: "Maya",
+      targetRoles: ["barista"],
+    });
+
+    expect(parsed.employmentType).toBe("any");
+    expect(parsed.salaryMin).toBeNull();
+    expect(parsed.jobFocus).toBe("both");
   });
 });
 

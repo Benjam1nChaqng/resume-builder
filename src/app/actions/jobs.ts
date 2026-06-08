@@ -61,34 +61,29 @@ function splitList(value: FormDataEntryValue | null): string[] {
     .filter(Boolean);
 }
 
+function parseSalary(value: FormDataEntryValue | null): number | null {
+  if (typeof value !== "string") return null;
+  const digits = value.replace(/[^0-9]/g, "");
+  if (!digits) return null;
+  const n = Number(digits);
+  return Number.isFinite(n) ? n : null;
+}
+
 export async function createJobSearchProfileAction(
   formData: FormData,
 ): Promise<void> {
   const userId = await requireSessionUserId();
+  const locationRaw = formData.get("locationPreference");
   const input = JobSearchProfileInputSchema.parse({
-    candidateName: formData.get("candidateName"),
+    candidateName: formData.get("candidateName") || "Me",
     targetRoles: splitList(formData.get("targetRoles")),
     locationPreference:
-      typeof formData.get("locationPreference") === "string"
-        ? formData.get("locationPreference")
-        : null,
-    remotePreference: formData.get("remotePreference") || "any",
-    experienceLevel:
-      typeof formData.get("experienceLevel") === "string"
-        ? formData.get("experienceLevel")
-        : null,
+      typeof locationRaw === "string" && locationRaw.trim() ? locationRaw : null,
+    employmentType: formData.get("employmentType") || "any",
+    salaryMin: parseSalary(formData.get("salaryMin")),
+    jobFocus: formData.get("jobFocus") || "both",
     keywords: splitList(formData.get("keywords")),
     exclusions: splitList(formData.get("exclusions")),
-    basicJobFilters: {
-      partTime: formData.get("partTime") === "on",
-      hourly: formData.get("hourly") === "on",
-      entryLevel: formData.get("entryLevel") === "on",
-      retail: formData.get("retail") === "on",
-      admin: formData.get("admin") === "on",
-      service: formData.get("service") === "on",
-      warehouse: formData.get("warehouse") === "on",
-      internship: formData.get("internship") === "on",
-    },
   });
   await createJobSearchProfile(userId, input);
   redirect("/jobs/discover");
