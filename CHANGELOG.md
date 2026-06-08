@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-06-08: Fix sign-in hang on Vercel preview deploys — `auth-client` no longer hardcodes `NEXT_PUBLIC_BETTER_AUTH_URL`; defaults to `window.location.origin` so sign-in works on prod, every preview, and localhost without env config.
 - 2026-05-27: Added job discovery and tailored-resume pipeline scaffolding: search profiles, curated sources, discovery runs/listings, resume-job fit checks, tailored resume copy persistence, print-ready PDF download route, dashboard/job/resume UI wiring, and focused tests for discovery, fit schema, and tailored title behavior.
 - 2026-05-14: Initial scaffold.
 - 2026-05-14: Database layer scaffold — Drizzle ORM + Neon HTTP driver, empty schema placeholder, drizzle-kit config & scripts (generate/migrate/push/studio), t3-env validation, `.env.local.example`.
