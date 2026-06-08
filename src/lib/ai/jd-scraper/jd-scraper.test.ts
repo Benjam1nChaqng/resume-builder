@@ -1,10 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { JobDescription } from "./schema";
 
 const mockCreate = vi.fn();
+const mockFetchHtml = vi.fn();
 
 vi.mock("@/lib/ai/anthropic", () => ({
   getAnthropic: () => ({ messages: { create: mockCreate } }),
+}));
+
+vi.mock("@/lib/net/safe-fetch", () => ({
+  fetchExternalHtml: mockFetchHtml,
 }));
 
 const validJobFixture: JobDescription = {
@@ -37,28 +42,21 @@ const toolUseResponse = (input: unknown) => ({
   usage: { input_tokens: 100, output_tokens: 100 },
 });
 
-const fetchResponse = (init: { ok: boolean; status: number; html?: string }) =>
-  ({
-    ok: init.ok,
-    status: init.status,
-    text: () => Promise.resolve(init.html ?? ""),
-  }) as unknown as Response;
-
-const originalFetch = globalThis.fetch;
+const fetchResult = (init: { ok: boolean; status: number; html?: string }) => ({
+  ok: init.ok,
+  status: init.status,
+  html: init.html ?? "",
+});
 
 beforeEach(() => {
   mockCreate.mockReset();
-  globalThis.fetch = vi.fn();
-});
-
-afterEach(() => {
-  globalThis.fetch = originalFetch;
+  mockFetchHtml.mockReset();
 });
 
 describe("scrapeJobDescription", () => {
   it("returns parsed job description on a valid fetch + Claude response", async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      fetchResponse({ ok: true, status: 200, html: "<html>...</html>" }),
+    mockFetchHtml.mockResolvedValueOnce(
+      fetchResult({ ok: true, status: 200, html: "<html>...</html>" }),
     );
     mockCreate.mockResolvedValueOnce(toolUseResponse(validJobFixture));
 
@@ -72,13 +70,13 @@ describe("scrapeJobDescription", () => {
       company: "Acme Corp",
       requirements: ["5+ years TypeScript", "Experience with Next.js"],
     });
-    expect(globalThis.fetch).toHaveBeenCalledOnce();
+    expect(mockFetchHtml).toHaveBeenCalledOnce();
     expect(mockCreate).toHaveBeenCalledOnce();
   });
 
   it("throws with the status code when fetch returns non-200", async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      fetchResponse({ ok: false, status: 404 }),
+    mockFetchHtml.mockResolvedValueOnce(
+      fetchResult({ ok: false, status: 404 }),
     );
 
     const { scrapeJobDescription } = await import("./index");
@@ -89,8 +87,8 @@ describe("scrapeJobDescription", () => {
   });
 
   it("throws when Claude returns no tool_use block", async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      fetchResponse({ ok: true, status: 200, html: "<html>x</html>" }),
+    mockFetchHtml.mockResolvedValueOnce(
+      fetchResult({ ok: true, status: 200, html: "<html>x</html>" }),
     );
     mockCreate.mockResolvedValueOnce({
       id: "msg_1",
@@ -110,8 +108,8 @@ describe("scrapeJobDescription", () => {
   });
 
   it("throws when Claude's structured output fails Zod validation", async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      fetchResponse({ ok: true, status: 200, html: "<html>x</html>" }),
+    mockFetchHtml.mockResolvedValueOnce(
+      fetchResult({ ok: true, status: 200, html: "<html>x</html>" }),
     );
     mockCreate.mockResolvedValueOnce(
       toolUseResponse({
@@ -127,8 +125,8 @@ describe("scrapeJobDescription", () => {
   });
 
   it("uses Opus 4.7 and forces tool_choice to extract_job_description", async () => {
-    (globalThis.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      fetchResponse({ ok: true, status: 200, html: "<html>x</html>" }),
+    mockFetchHtml.mockResolvedValueOnce(
+      fetchResult({ ok: true, status: 200, html: "<html>x</html>" }),
     );
     mockCreate.mockResolvedValueOnce(toolUseResponse(validJobFixture));
 

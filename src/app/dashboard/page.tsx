@@ -102,9 +102,17 @@ export default async function DashboardPage() {
             <h2 className="text-lg font-medium text-neutral-900 dark:text-neutral-50">
               Jobs
             </h2>
-            <Link href="/job/new" className={buttonVariants({ size: "sm" })}>
-              + Add job
-            </Link>
+            <div className="flex gap-2">
+              <Link
+                href="/jobs/discover"
+                className={buttonVariants({ size: "sm", variant: "outline" })}
+              >
+                Discover
+              </Link>
+              <Link href="/job/new" className={buttonVariants({ size: "sm" })}>
+                + Add job
+              </Link>
+            </div>
           </div>
 
           {jobs.length === 0 ? (

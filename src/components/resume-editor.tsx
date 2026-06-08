@@ -162,9 +162,17 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
             ariaLabel="Resume title"
             className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-50"
           />
-          <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "sm" })}>
-            ← Dashboard
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href={`/resume/${resume.id}/pdf`}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              Download PDF
+            </Link>
+            <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "sm" })}>
+              ← Dashboard
+            </Link>
+          </div>
         </header>
 
         {resume.contactInfo && (
