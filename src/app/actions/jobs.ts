@@ -13,6 +13,7 @@ import {
   createJobSourceForUser,
   updateListingStatusForUser,
 } from "@/lib/jobs/discovery-repo";
+import { draftEmailForJob, type JobEmailDraft } from "@/lib/jobs/email";
 import { runResumeJobFit } from "@/lib/jobs/fit";
 import { runJobDiscovery } from "@/lib/jobs/run-discovery";
 import { createTailoredResumeCopy } from "@/lib/jobs/tailored-resume";
@@ -45,6 +46,13 @@ export async function tailorResumeForJobAction(
   resumeId: string,
 ): Promise<TailorResumeResult> {
   return tailorResumeForJob({ jobId, resumeId });
+}
+
+export async function draftJobEmailAction(
+  jobId: string,
+  resumeId: string,
+): Promise<JobEmailDraft> {
+  return draftEmailForJob({ jobId, resumeId });
 }
 
 async function requireSessionUserId(): Promise<string> {

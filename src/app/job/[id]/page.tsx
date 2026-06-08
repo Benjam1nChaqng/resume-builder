@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { application, job, resumeJobFit } from "@/lib/db/jobs-schema";
 import { resume } from "@/lib/db/resume-schema";
+import { JobEmailPanel } from "@/components/job-email-panel";
 import { JobTailorPanel } from "@/components/job-tailor-panel";
 import {
   createTailoredResumeCopyAction,
@@ -208,6 +209,10 @@ export default async function JobPage({
         </section>
 
         <JobTailorPanel jobId={jd.id} resumes={resumes} />
+
+        <div className="mt-12">
+          <JobEmailPanel jobId={jd.id} resumes={resumes} />
+        </div>
       </div>
     </main>
   );

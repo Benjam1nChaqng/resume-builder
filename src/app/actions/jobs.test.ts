@@ -40,6 +40,10 @@ vi.mock("@/lib/jobs/discovery-repo", () => ({
   updateListingStatusForUser: vi.fn(),
 }));
 
+vi.mock("@/lib/jobs/email", () => ({
+  draftEmailForJob: vi.fn(),
+}));
+
 vi.mock("@/lib/jobs/fit", () => ({
   runResumeJobFit: vi.fn(),
 }));
