@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getAnthropic } from "@/lib/ai/anthropic";
 import { MODELS } from "@/lib/ai/models";
+import { fetchExternalHtml } from "@/lib/net/safe-fetch";
 import { JobDescriptionSchema, type JobDescription } from "./schema";
 
 const TOOL_NAME = "extract_job_description";
@@ -26,15 +27,16 @@ const FETCH_HEADERS = {
 export async function scrapeJobDescription({
   url,
 }: ScrapeInput): Promise<JobDescription> {
-  const response = await fetch(url, { headers: FETCH_HEADERS });
+  const { ok, status, html } = await fetchExternalHtml(url, {
+    headers: FETCH_HEADERS,
+  });
 
-  if (!response.ok) {
+  if (!ok) {
     throw new Error(
-      `JDScraper: fetch failed for ${url} with status ${response.status}`,
+      `JDScraper: fetch failed for ${url} with status ${status}`,
     );
   }
 
-  const html = await response.text();
   const anthropic = getAnthropic();
   const inputSchema = z.toJSONSchema(JobDescriptionSchema);
 

@@ -1,3 +1,4 @@
+import { fetchExternalHtml } from "@/lib/net/safe-fetch";
 import { parseJobListingsFromHtml } from "./discovery";
 import {
   completeDiscoveryRun,
@@ -26,12 +27,13 @@ export async function runJobDiscovery({
 
   for (const source of sources) {
     try {
-      const response = await fetch(source.url, { headers: FETCH_HEADERS });
-      if (!response.ok) {
-        errors.push(`${source.label}: HTTP ${response.status}`);
+      const { ok, status, html } = await fetchExternalHtml(source.url, {
+        headers: FETCH_HEADERS,
+      });
+      if (!ok) {
+        errors.push(`${source.label}: HTTP ${status}`);
         continue;
       }
-      const html = await response.text();
       const listings = parseJobListingsFromHtml(html, source.url);
       discovered += await upsertDiscoveredListings({
         profileId,
