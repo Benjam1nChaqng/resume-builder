@@ -1,18 +1,33 @@
-import { fetchExternalHtml } from "@/lib/net/safe-fetch";
-import { parseJobListingsFromHtml } from "./discovery";
+import { fetchJobFeed } from "./job-feed";
+import type { SearchCriteria } from "./discovery";
 import {
   completeDiscoveryRun,
   createDiscoveryRun,
-  getEnabledSourcesForProfile,
+  getOwnedProfile,
+  requireProfileOwner,
   upsertDiscoveredListings,
 } from "./discovery-repo";
 
-const FETCH_HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (compatible; ResumeBuilderBot/0.1; +https://github.com/Benjam1nChaqng/resume-builder)",
-  Accept: "text/html,application/xhtml+xml",
-};
+export function profileToCriteria(profile: {
+  targetRoles: string[];
+  locationPreference: string | null;
+  employmentType: string;
+  salaryMin: number | null;
+  jobFocus: string;
+}): SearchCriteria {
+  return {
+    roles: profile.targetRoles,
+    location: profile.locationPreference,
+    employmentType: profile.employmentType as SearchCriteria["employmentType"],
+    salaryMin: profile.salaryMin,
+    jobFocus: profile.jobFocus as SearchCriteria["jobFocus"],
+  };
+}
 
+/**
+ * Pulls fresh listings for a saved search into the app. The user never supplies
+ * a URL — we build the search from their criteria and fetch from a job feed.
+ */
 export async function runJobDiscovery({
   profileId,
   userId,
@@ -20,38 +35,25 @@ export async function runJobDiscovery({
   profileId: string;
   userId: string;
 }): Promise<{ discovered: number; errors: string[] }> {
-  const sources = await getEnabledSourcesForProfile(profileId, userId);
+  await requireProfileOwner(profileId, userId);
+  const profile = await getOwnedProfile(profileId, userId);
+  if (!profile) {
+    throw new Error("Job search profile not found.");
+  }
+
   const runId = await createDiscoveryRun(profileId);
-  let discovered = 0;
   const errors: string[] = [];
 
-  for (const source of sources) {
-    try {
-      const { ok, status, html } = await fetchExternalHtml(source.url, {
-        headers: FETCH_HEADERS,
-      });
-      if (!ok) {
-        errors.push(`${source.label}: HTTP ${status}`);
-        continue;
-      }
-      const listings = parseJobListingsFromHtml(html, source.url);
-      discovered += await upsertDiscoveredListings({
-        profileId,
-        sourceId: source.id,
-        listings,
-      });
-    } catch (err) {
-      errors.push(
-        `${source.label}: ${err instanceof Error ? err.message : "unknown error"}`,
-      );
-    }
-  }
+  const { listings, error } = await fetchJobFeed(profileToCriteria(profile));
+  if (error) errors.push(error);
+
+  const discovered = await upsertDiscoveredListings({ profileId, listings });
 
   await completeDiscoveryRun(
     runId,
-    errors.length === sources.length && sources.length > 0 ? "failed" : "completed",
+    error && discovered === 0 ? "failed" : "completed",
     errors.length > 0 ? errors.join("; ") : undefined,
   );
+
   return { discovered, errors };
 }
-

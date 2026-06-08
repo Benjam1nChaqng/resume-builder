@@ -72,6 +72,18 @@ export async function getEnabledSourcesForProfile(
     .where(and(eq(jobSource.profileId, profileId), eq(jobSource.enabled, true)));
 }
 
+/** Loads a profile the caller owns, or returns null. */
+export async function getOwnedProfile(profileId: string, userId: string) {
+  const rows = await db
+    .select()
+    .from(jobSearchProfile)
+    .where(
+      and(eq(jobSearchProfile.id, profileId), eq(jobSearchProfile.userId, userId)),
+    )
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export async function createDiscoveryRun(profileId: string): Promise<string> {
   const id = randomUUID();
   await db.insert(jobDiscoveryRun).values({ id, profileId, status: "running" });
@@ -91,11 +103,11 @@ export async function completeDiscoveryRun(
 
 export async function upsertDiscoveredListings({
   profileId,
-  sourceId,
+  sourceId = null,
   listings,
 }: {
   profileId: string;
-  sourceId: string;
+  sourceId?: string | null;
   listings: DiscoveredListing[];
 }): Promise<number> {
   if (listings.length === 0) return 0;
