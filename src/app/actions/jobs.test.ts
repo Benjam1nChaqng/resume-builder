@@ -8,6 +8,7 @@ const mockCreateTailoredResumeCopy = vi.fn();
 const mockMarkJobApplied = vi.fn();
 const mockUpdateJobSource = vi.fn();
 const mockCreateJobSearchProfile = vi.fn();
+const mockUpdateJobSearchProfile = vi.fn();
 const mockCreateJobSource = vi.fn();
 const mockJobSearchProfileSafeParse = vi.fn();
 const mockJobSourceSafeParse = vi.fn();
@@ -67,7 +68,7 @@ vi.mock("@/lib/jobs/discovery-repo", () => ({
   deleteJobSearchProfileForUser: vi.fn(),
   deleteJobSourceForUser: vi.fn(),
   setJobSourceEnabledForUser: vi.fn(),
-  updateJobSearchProfileForUser: vi.fn(),
+  updateJobSearchProfileForUser: mockUpdateJobSearchProfile,
   updateJobSourceForUser: mockUpdateJobSource,
   updateListingStatusForUser: vi.fn(),
   requireProfileOwner: mockRequireProfileOwner,
@@ -99,6 +100,7 @@ beforeEach(() => {
   mockMarkJobApplied.mockReset();
   mockUpdateJobSource.mockReset();
   mockCreateJobSearchProfile.mockReset();
+  mockUpdateJobSearchProfile.mockReset();
   mockCreateJobSource.mockReset();
   mockJobSearchProfileSafeParse.mockReset();
   mockJobSourceSafeParse.mockReset();
@@ -261,6 +263,85 @@ describe("selectJobSearchProfileAction", () => {
     ).rejects.toThrow(/not found/);
     expect(mockCookieSet).not.toHaveBeenCalled();
     expect(mockRedirect).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateJobSearchProfileAction", () => {
+  it("returns field errors and preserves submitted checkbox state", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    mockJobSearchProfileSafeParse.mockReturnValueOnce({
+      success: false,
+      error: {
+        flatten: () => ({ fieldErrors: { targetRoles: ["Choose a role"] } }),
+      },
+    });
+    const formData = new FormData();
+    formData.set("profileId", "profile-1");
+    formData.set("candidateName", "Maya");
+    formData.set("targetRoles", "");
+    formData.set("partTime", "on");
+
+    const { updateJobSearchProfileAction } = await import("./jobs");
+    await expect(
+      updateJobSearchProfileAction(initialDiscoveryFormState, formData),
+    ).resolves.toMatchObject({
+      fieldErrors: { targetRoles: ["Choose a role"] },
+      formError: null,
+      submitted: true,
+      values: {
+        candidateName: "Maya",
+        targetRoles: "",
+        partTime: "on",
+      },
+    });
+    expect(mockUpdateJobSearchProfile).not.toHaveBeenCalled();
+  });
+
+  it("returns safe feedback when the owned profile is stale", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    const input = { candidateName: "Maya", targetRoles: ["Barista"] };
+    mockJobSearchProfileSafeParse.mockReturnValueOnce({
+      success: true,
+      data: input,
+    });
+    mockUpdateJobSearchProfile.mockRejectedValueOnce(
+      new Error("Job search profile not found."),
+    );
+    const formData = new FormData();
+    formData.set("profileId", "profile-stale");
+
+    const { updateJobSearchProfileAction } = await import("./jobs");
+    await expect(
+      updateJobSearchProfileAction(initialDiscoveryFormState, formData),
+    ).resolves.toMatchObject({
+      formError: "The selected search profile is no longer available.",
+      submitted: true,
+    });
+    expect(mockRedirect).not.toHaveBeenCalled();
+  });
+
+  it("updates an owned profile and redirects with success feedback", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    const input = { candidateName: "Maya", targetRoles: ["Barista"] };
+    mockJobSearchProfileSafeParse.mockReturnValueOnce({
+      success: true,
+      data: input,
+    });
+    mockUpdateJobSearchProfile.mockResolvedValueOnce(undefined);
+    const formData = new FormData();
+    formData.set("profileId", "profile-1");
+
+    const { updateJobSearchProfileAction } = await import("./jobs");
+    await expect(
+      updateJobSearchProfileAction(initialDiscoveryFormState, formData),
+    ).rejects.toThrow(
+      /REDIRECT:\/jobs\/discover\?profile=profile-1&notice=profile-updated/,
+    );
+    expect(mockUpdateJobSearchProfile).toHaveBeenCalledWith(
+      "user-1",
+      "profile-1",
+      input,
+    );
   });
 });
 

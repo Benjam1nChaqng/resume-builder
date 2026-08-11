@@ -1,28 +1,23 @@
 import { cookies, headers } from "next/headers";
-import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { BASIC_JOB_FILTERS } from "@/lib/jobs/discovery";
 import { listDiscoveryData } from "@/lib/jobs/discovery-repo";
 import {
   runJobDiscoveryAction,
-  updateJobSearchProfileAction,
 } from "@/app/actions/jobs";
-import { DeleteJobSearchProfileButton } from "@/components/delete-job-search-profile-button";
 import { ActionNotice } from "@/components/action-notice";
 import { DiscoveredListingActions } from "@/components/discovered-listing-actions";
 import { JobSearchProfileSelector } from "@/components/job-search-profile-selector";
 import { JobSearchProfileCreateForm } from "@/components/job-search-profile-create-form";
+import { JobSearchProfileUpdateForm } from "@/components/job-search-profile-update-form";
 import { JobListingSortSelect } from "@/components/job-listing-sort-select";
 import { JobSourceActions } from "@/components/job-source-actions";
 import { JobSourceCreateForm } from "@/components/job-source-create-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   parseSelectedProfileCookie,
   SELECTED_JOB_PROFILE_COOKIE,
@@ -202,39 +197,7 @@ export default async function JobDiscoverPage({
                     )}
                     <details className="border-y border-neutral-200 py-3 dark:border-neutral-800">
                       <summary className="cursor-pointer text-sm font-medium">Edit search criteria</summary>
-                      <form action={updateJobSearchProfileAction} className="mt-4 grid gap-4 sm:grid-cols-2">
-                        <input type="hidden" name="profileId" value={activeProfile.id} />
-                        <Field name="candidateName" label="Candidate" placeholder="Maya" prefix="edit" defaultValue={activeProfile.candidateName} />
-                        <Field name="targetRoles" label="Target roles" placeholder="barista, office assistant" prefix="edit" defaultValue={activeProfile.targetRoles.join(", ")} />
-                        <Field name="locationPreference" label="Location" placeholder="Los Angeles or remote" prefix="edit" defaultValue={activeProfile.locationPreference ?? ""} />
-                        <Select name="remotePreference" label="Remote" prefix="edit" defaultValue={activeProfile.remotePreference}>
-                          <option value="any">Any</option>
-                          <option value="remote">Remote</option>
-                          <option value="hybrid">Hybrid</option>
-                          <option value="onsite">Onsite</option>
-                        </Select>
-                        <Field name="experienceLevel" label="Level" placeholder="entry" prefix="edit" defaultValue={activeProfile.experienceLevel ?? ""} />
-                        <Field name="keywords" label="Keywords" placeholder="cashier, mornings" prefix="edit" defaultValue={activeProfile.keywords.join(", ")} />
-                        <Field name="exclusions" label="Exclusions" placeholder="night shift" prefix="edit" defaultValue={activeProfile.exclusions.join(", ")} />
-                        <div className="grid grid-cols-2 gap-2 text-sm sm:col-span-2">
-                          {BASIC_JOB_FILTERS.map((filter) => (
-                            <label key={filter} className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                name={filter}
-                                defaultChecked={activeProfile.basicJobFilters[filter]}
-                              />
-                              {filter}
-                            </label>
-                          ))}
-                        </div>
-                        <div className="flex flex-wrap gap-2 sm:col-span-2">
-                          <PendingSubmitButton type="submit" pendingLabel="Saving">
-                            Save criteria
-                          </PendingSubmitButton>
-                          <DeleteJobSearchProfileButton profileId={activeProfile.id} />
-                        </div>
-                      </form>
+                      <JobSearchProfileUpdateForm profile={activeProfile} />
                     </details>
                     <nav
                       aria-label="Listing status"
@@ -431,65 +394,6 @@ function listingPageHref({
     page: String(page),
   });
   return `/jobs/discover?${params.toString()}`;
-}
-
-function Field({
-  name,
-  label,
-  placeholder,
-  type = "text",
-  prefix,
-  defaultValue,
-}: {
-  name: string;
-  label: string;
-  placeholder: string;
-  type?: string;
-  prefix: string;
-  defaultValue?: string;
-}) {
-  const id = `${prefix}-${name}`;
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        name={name}
-        type={type}
-        placeholder={placeholder}
-        defaultValue={defaultValue}
-      />
-    </div>
-  );
-}
-
-function Select({
-  name,
-  label,
-  children,
-  prefix,
-  defaultValue,
-}: {
-  name: string;
-  label: string;
-  children: ReactNode;
-  prefix: string;
-  defaultValue?: string;
-}) {
-  const id = `${prefix}-${name}`;
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <select
-        id={id}
-        name={name}
-        defaultValue={defaultValue}
-        className="h-9 w-full rounded-md border border-neutral-200 bg-transparent px-3 text-sm dark:border-neutral-800"
-      >
-        {children}
-      </select>
-    </div>
-  );
 }
 
 function DiscoveryRunSummary({

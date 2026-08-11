@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-11: Added field-level profile-edit validation with preserved form values, checkbox state, stale ownership feedback, and safe infrastructure errors.
 - 2026-08-11: Added explicit next-step empty states for profiles without sources, jobs without resumes, and resumes without fit results.
 - 2026-08-11: Added whitelisted success/warning notices across discovery, listing review, fit, tailoring, application, and PDF download actions.
 - 2026-08-11: Versioned fit analysis to v2 with separate hard/preferred gaps, general concerns, and unsupported claims that tailoring must avoid.

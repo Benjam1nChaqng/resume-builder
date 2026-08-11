@@ -45,6 +45,7 @@ export type JobDiscoveryFormState = {
   fieldErrors: Partial<Record<string, string[]>>;
   formError: string | null;
   values?: Record<string, string>;
+  submitted?: boolean;
 };
 
 const EMPTY_DISCOVERY_FORM_STATE: JobDiscoveryFormState = {
@@ -167,10 +168,6 @@ function searchProfileFormValue(formData: FormData) {
   };
 }
 
-function parseSearchProfileForm(formData: FormData) {
-  return JobSearchProfileInputSchema.parse(searchProfileFormValue(formData));
-}
-
 function discoveryPath(
   profileId: string,
   values: Record<string, string> = {},
@@ -211,18 +208,46 @@ export async function createJobSearchProfileAction(
 }
 
 export async function updateJobSearchProfileAction(
+  _previousState: JobDiscoveryFormState,
   formData: FormData,
-): Promise<void> {
+): Promise<JobDiscoveryFormState> {
   const userId = await requireSessionUserId();
   const profileId = formData.get("profileId");
+  const values = formStringValues(formData, PROFILE_FORM_FIELDS);
   if (typeof profileId !== "string" || !profileId) {
-    throw new Error("Profile is required.");
+    return {
+      ...EMPTY_DISCOVERY_FORM_STATE,
+      formError: "The selected search profile is no longer available.",
+      values,
+      submitted: true,
+    };
   }
-  await updateJobSearchProfileForUser(
-    userId,
-    profileId,
-    parseSearchProfileForm(formData),
+  const parsed = JobSearchProfileInputSchema.safeParse(
+    searchProfileFormValue(formData),
   );
+  if (!parsed.success) {
+    return {
+      fieldErrors: parsed.error.flatten().fieldErrors,
+      formError: null,
+      values,
+      submitted: true,
+    };
+  }
+
+  try {
+    await updateJobSearchProfileForUser(userId, profileId, parsed.data);
+  } catch (error) {
+    const missing =
+      error instanceof Error && error.message.includes("profile not found");
+    return {
+      ...EMPTY_DISCOVERY_FORM_STATE,
+      formError: missing
+        ? "The selected search profile is no longer available."
+        : "Unable to save these search criteria right now.",
+      values,
+      submitted: true,
+    };
+  }
   redirect(discoveryPath(profileId, { notice: "profile-updated" }));
 }
 
