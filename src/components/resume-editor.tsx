@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Eye, Plus, X } from "lucide-react";
 import {
   addBulletAction,
   addEducationAction,
@@ -151,7 +151,7 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
   return (
     <main className="min-h-screen bg-white px-6 py-16 dark:bg-neutral-950">
       <div className="mx-auto max-w-2xl space-y-12">
-        <header className="flex items-baseline justify-between gap-4">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-baseline sm:justify-between">
           <EditableText
             value={resume.title}
             onSave={async (next) => {
@@ -164,9 +164,17 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
           />
           <div className="flex gap-2">
             <Link
+              href={`/resume/${resume.id}/preview`}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <Eye className="size-4" />
+              Preview
+            </Link>
+            <Link
               href={`/resume/${resume.id}/pdf`}
               className={buttonVariants({ variant: "outline", size: "sm" })}
             >
+              <Download className="size-4" />
               Download PDF
             </Link>
             <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "sm" })}>

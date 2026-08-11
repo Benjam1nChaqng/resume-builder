@@ -81,14 +81,14 @@ Priority meanings:
 
 ### Real PDF download
 
-- [ ] Add the approved PDF rendering dependency and lockfile update.
-- [ ] Build one ATS-safe PDF document component from structured resume data.
-- [ ] Add an authenticated route handler that returns `application/pdf` bytes.
-- [ ] Return `404` or `403` without leaking whether another user's resume exists.
-- [ ] Generate a sanitized filename from candidate, company, and role when linked to a job.
-- [ ] Keep the print preview as an optional preview, not the download implementation.
-- [ ] Add export tests for authorization, headers, filename, and non-empty PDF bytes.
-- [ ] Render representative one-page and two-page fixtures and visually inspect them.
+- [x] Add the approved PDF rendering dependency and lockfile update.
+- [x] Build one ATS-safe PDF document component from structured resume data.
+- [x] Add an authenticated route handler that returns `application/pdf` bytes.
+- [x] Return `404` or `403` without leaking whether another user's resume exists.
+- [x] Generate a sanitized filename from candidate, company, and role when linked to a job.
+- [x] Keep the print preview as an optional preview, not the download implementation.
+- [x] Add export tests for authorization, headers, filename, and non-empty PDF bytes.
+- [x] Render representative one-page and two-page fixtures and visually inspect them.
 
 ### End-to-end user experience
 

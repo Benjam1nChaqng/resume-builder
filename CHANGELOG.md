@@ -3,6 +3,7 @@
 - 2026-08-11: Added a prioritized product backlog and reusable Codex operator workflow for sustained, verified resume-builder development.
 - 2026-08-11: Restored Drizzle snapshot metadata for the job discovery migration and verified the checked-in schema produces no additional migration.
 - 2026-08-11: Hardened job-source and single-job fetching against SSRF, unsafe redirects, timeouts, oversized/non-HTML responses, and inaccurate discovery counts.
+- 2026-08-11: Replaced print-only resume export with an authorized ATS-style PDF download route, deterministic tailored filenames, preview UI, and rendered one/two-page verification fixtures.
 - 2026-05-27: Added job discovery and tailored-resume pipeline scaffolding: search profiles, curated sources, discovery runs/listings, resume-job fit checks, tailored resume copy persistence, print-ready PDF download route, dashboard/job/resume UI wiring, and focused tests for discovery, fit schema, and tailored title behavior.
 - 2026-05-14: Initial scaffold.
 - 2026-05-14: Database layer scaffold — Drizzle ORM + Neon HTTP driver, empty schema placeholder, drizzle-kit config & scripts (generate/migrate/push/studio), t3-env validation, `.env.local.example`.

@@ -8,7 +8,7 @@ import { PrintButton } from "@/components/print-button";
 
 type RouteParams = { id: string };
 
-export default async function ResumePdfPage({
+export default async function ResumePreviewPage({
   params,
 }: {
   params: Promise<RouteParams>;
