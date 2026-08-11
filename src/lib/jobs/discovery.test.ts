@@ -33,6 +33,61 @@ describe("job discovery helpers", () => {
     ]);
   });
 
+  it("extracts JobPosting JSON-LD and dedupes it against matching links", () => {
+    const html = `
+      <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@graph": [{
+            "@type": ["Thing", "JobPosting"],
+            "title": "Customer Support Associate",
+            "url": "/jobs/support?utm_source=board",
+            "jobLocationType": "TELECOMMUTE",
+            "hiringOrganization": { "@type": "Organization", "name": "Acme Services" }
+          }]
+        }
+      </script>
+      <a href="/jobs/support">Customer Support Associate</a>
+    `;
+
+    expect(parseJobListingsFromHtml(html, "https://acme.test/careers")).toEqual([
+      {
+        canonicalUrl: "https://acme.test/jobs/support",
+        title: "Customer Support Associate",
+        company: "Acme Services",
+        location: "Remote",
+      },
+    ]);
+  });
+
+  it("extracts structured locations and ignores malformed JSON-LD", () => {
+    const html = `
+      <script type="application/ld+json">{ definitely not json }</script>
+      <script data-source="careers" type="application/ld+json">
+        [{
+          "@type": "JobPosting",
+          "name": "Office Coordinator",
+          "url": "https://jobs.example.com/positions/42",
+          "hiringOrganization": { "name": "Example Co" },
+          "jobLocation": {
+            "address": {
+              "addressLocality": "Seattle",
+              "addressRegion": "WA",
+              "addressCountry": { "name": "US" }
+            }
+          }
+        }]
+      </script>
+    `;
+
+    const [listing] = parseJobListingsFromHtml(html, "https://jobs.example.com");
+    expect(listing).toMatchObject({
+      title: "Office Coordinator",
+      company: "Example Co",
+      location: "Seattle, WA, US",
+    });
+  });
+
   it("validates search profile inputs with basic-job filters", () => {
     const parsed = JobSearchProfileInputSchema.parse({
       candidateName: "Maya",

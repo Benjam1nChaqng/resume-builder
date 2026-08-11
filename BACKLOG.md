@@ -39,7 +39,7 @@ Priority meanings:
 
 ### Discovery quality
 
-- [ ] Parse `JobPosting` JSON-LD before falling back to anchor extraction.
+- [x] Parse `JobPosting` JSON-LD before falling back to anchor extraction.
 - [ ] Add dedicated adapters for Greenhouse, Lever, Ashby, and Workday search pages.
 - [ ] Extract company, location, employment type, compensation, and posted date when available.
 - [ ] Apply profile target roles, keywords, exclusions, location, remote, and basic-job filters.

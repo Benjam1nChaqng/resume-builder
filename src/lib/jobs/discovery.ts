@@ -114,6 +114,121 @@ function stripTags(text: string): string {
   return decodeHtml(text.replace(/<[^>]*>/g, " "));
 }
 
+function addListing(
+  listings: DiscoveredListing[],
+  seen: Set<string>,
+  listing: DiscoveredListing,
+): void {
+  if (seen.has(listing.canonicalUrl) || listings.length >= 50) return;
+  seen.add(listing.canonicalUrl);
+  listings.push(listing);
+}
+
+type JsonRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is JsonRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasJobPostingType(value: unknown): boolean {
+  const types = Array.isArray(value) ? value : [value];
+  return types.some(
+    (type) => typeof type === "string" && type.toLowerCase() === "jobposting",
+  );
+}
+
+function collectJobPostings(value: unknown, postings: JsonRecord[]): void {
+  if (Array.isArray(value)) {
+    for (const item of value) collectJobPostings(item, postings);
+    return;
+  }
+  if (!isRecord(value)) return;
+  if (hasJobPostingType(value["@type"])) postings.push(value);
+  if (value["@graph"]) collectJobPostings(value["@graph"], postings);
+}
+
+function textValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? stripTags(value) : null;
+}
+
+function organizationName(value: unknown): string | null {
+  if (!isRecord(value)) return null;
+  return textValue(value.name);
+}
+
+function locationFromAddress(value: unknown): string | null {
+  if (!isRecord(value)) return null;
+  const address = isRecord(value.address) ? value.address : value;
+  const country = isRecord(address.addressCountry)
+    ? textValue(address.addressCountry.name)
+    : textValue(address.addressCountry);
+  const parts = [
+    textValue(address.addressLocality),
+    textValue(address.addressRegion),
+    country,
+  ].filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? [...new Set(parts)].join(", ") : null;
+}
+
+function jobLocation(posting: JsonRecord): string | null {
+  if (
+    textValue(posting.jobLocationType)?.toLowerCase().includes("telecommute") ||
+    textValue(posting.jobLocationType)?.toLowerCase().includes("remote")
+  ) {
+    return "Remote";
+  }
+  const locations = Array.isArray(posting.jobLocation)
+    ? posting.jobLocation
+    : [posting.jobLocation];
+  const values = locations
+    .map(locationFromAddress)
+    .filter((value): value is string => Boolean(value));
+  return values.length > 0 ? [...new Set(values)].join(" / ") : null;
+}
+
+function parseJsonLdListings(
+  html: string,
+  sourceUrl: string,
+  listings: DiscoveredListing[],
+  seen: Set<string>,
+): void {
+  const scriptRegex =
+    /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+
+  for (const match of html.matchAll(scriptRegex)) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(
+        (match[1] ?? "")
+          .replace(/&quot;/g, '"')
+          .replace(/&amp;/g, "&")
+          .trim(),
+      );
+    } catch {
+      continue;
+    }
+
+    const postings: JsonRecord[] = [];
+    collectJobPostings(parsed, postings);
+    for (const posting of postings) {
+      const title = textValue(posting.title) ?? textValue(posting.name);
+      const rawUrl = textValue(posting.url) ?? textValue(posting.sameAs);
+      if (!title || !rawUrl) continue;
+
+      try {
+        addListing(listings, seen, {
+          canonicalUrl: canonicalizeJobUrl(rawUrl, sourceUrl),
+          title: title.slice(0, 180),
+          company: organizationName(posting.hiringOrganization),
+          location: jobLocation(posting),
+        });
+      } catch {
+        continue;
+      }
+    }
+  }
+}
+
 function looksLikeJobLink(url: string, label: string): boolean {
   const haystack = `${url} ${label}`.toLowerCase();
   return [
@@ -137,6 +252,8 @@ export function parseJobListingsFromHtml(
   const listings: DiscoveredListing[] = [];
   const anchorRegex = /<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
 
+  parseJsonLdListings(html, sourceUrl, listings, seen);
+
   for (const match of html.matchAll(anchorRegex)) {
     const href = match[1];
     const label = stripTags(match[2] ?? "");
@@ -149,9 +266,7 @@ export function parseJobListingsFromHtml(
       continue;
     }
 
-    if (seen.has(canonicalUrl)) continue;
-    seen.add(canonicalUrl);
-    listings.push({
+    addListing(listings, seen, {
       canonicalUrl,
       title: label.slice(0, 180),
       company: new URL(sourceUrl).hostname.replace(/^www\./, ""),
