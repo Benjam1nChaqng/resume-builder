@@ -12,6 +12,7 @@ import type {
   JobSearchProfileInput,
   JobSourceInput,
 } from "./discovery";
+import { assertPublicHttpUrl } from "./public-web";
 
 export async function createJobSearchProfile(
   userId: string,
@@ -27,6 +28,7 @@ export async function createJobSourceForUser(
   input: JobSourceInput,
 ): Promise<string> {
   await requireProfileOwner(input.profileId, userId);
+  await assertPublicHttpUrl(input.url);
   const id = randomUUID();
   await db
     .insert(jobSource)
@@ -99,7 +101,7 @@ export async function upsertDiscoveredListings({
   listings: DiscoveredListing[];
 }): Promise<number> {
   if (listings.length === 0) return 0;
-  await db
+  const inserted = await db
     .insert(jobListing)
     .values(
       listings.map((listing) => ({
@@ -111,8 +113,9 @@ export async function upsertDiscoveredListings({
         location: listing.location,
       })),
     )
-    .onConflictDoNothing();
-  return listings.length;
+    .onConflictDoNothing()
+    .returning({ id: jobListing.id });
+  return inserted.length;
 }
 
 export async function updateListingStatusForUser({
@@ -150,4 +153,3 @@ export async function getRecentProfiles(userId: string) {
     .where(eq(jobSearchProfile.userId, userId))
     .orderBy(desc(jobSearchProfile.updatedAt));
 }
-

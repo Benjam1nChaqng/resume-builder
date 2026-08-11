@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getAnthropic } from "@/lib/ai/anthropic";
 import { MODELS } from "@/lib/ai/models";
+import { fetchPublicHtml } from "@/lib/jobs/public-web";
 import { JobDescriptionSchema, type JobDescription } from "./schema";
 
 const TOOL_NAME = "extract_job_description";
@@ -17,24 +18,14 @@ Rules:
 
 export type ScrapeInput = { url: string };
 
-const FETCH_HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (compatible; ResumeBuilderBot/0.1; +https://github.com/Benjam1nChaqng/resume-builder)",
-  Accept: "text/html,application/xhtml+xml",
-};
-
 export async function scrapeJobDescription({
   url,
 }: ScrapeInput): Promise<JobDescription> {
-  const response = await fetch(url, { headers: FETCH_HEADERS });
-
-  if (!response.ok) {
+  const { html, finalUrl } = await fetchPublicHtml(url).catch((error) => {
     throw new Error(
-      `JDScraper: fetch failed for ${url} with status ${response.status}`,
+      `JDScraper: fetch failed for ${url}: ${error instanceof Error ? error.message : "unknown error"}`,
     );
-  }
-
-  const html = await response.text();
+  });
   const anthropic = getAnthropic();
   const inputSchema = z.toJSONSchema(JobDescriptionSchema);
 
@@ -48,7 +39,7 @@ export async function scrapeJobDescription({
         content: [
           {
             type: "text",
-            text: `Source URL: ${url}\n\nExtract the job description from this HTML via the ${TOOL_NAME} tool.\n\n--- HTML ---\n${html}`,
+            text: `Source URL: ${finalUrl}\n\nExtract the job description from this HTML via the ${TOOL_NAME} tool.\n\n--- HTML ---\n${html}`,
           },
         ],
       },

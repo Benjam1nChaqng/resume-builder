@@ -28,11 +28,11 @@ Priority meanings:
 
 - [ ] Add profile update and delete actions with ownership checks.
 - [ ] Add source enable, disable, edit, and delete actions with ownership checks.
-- [ ] Normalize and canonicalize source URLs before uniqueness checks.
-- [ ] Reject non-HTTP source protocols.
-- [ ] Block localhost, link-local, private-network, and metadata-service targets to prevent SSRF.
-- [ ] Revalidate resolved redirects before fetching source content.
-- [ ] Add request timeout, response-size limit, and content-type validation.
+- [x] Normalize and canonicalize source URLs before uniqueness checks.
+- [x] Reject non-HTTP source protocols.
+- [x] Block localhost, link-local, private-network, and metadata-service targets to prevent SSRF.
+- [x] Revalidate resolved redirects before fetching source content.
+- [x] Add request timeout, response-size limit, and content-type validation.
 - [ ] Surface duplicate-source, invalid-source, and ownership errors in the UI.
 - [ ] Add a profile selector that does not silently choose only the newest profile.
 - [ ] Persist a selected or default search profile per user.
@@ -44,13 +44,13 @@ Priority meanings:
 - [ ] Extract company, location, employment type, compensation, and posted date when available.
 - [ ] Apply profile target roles, keywords, exclusions, location, remote, and basic-job filters.
 - [ ] Deduplicate by canonical URL and normalized company/title fingerprint.
-- [ ] Return the number of rows actually inserted, not the number attempted.
+- [x] Return the number of rows actually inserted, not the number attempted.
 - [ ] Run independent source fetches with bounded concurrency.
 - [ ] Record per-source results and partial failures for each discovery run.
 - [ ] Show last-run status, duration, inserted count, and error summary.
 - [ ] Add retry behavior for transient source failures without duplicating listings.
 - [ ] Add fixture tests for each supported parser and malformed HTML.
-- [ ] Add tests for redirects, timeouts, oversized responses, and blocked hosts.
+- [x] Add tests for redirects, timeouts, oversized responses, and blocked hosts.
 
 ### Listing review and jobs
 

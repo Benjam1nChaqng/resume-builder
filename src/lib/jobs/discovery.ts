@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeHttpUrl } from "./public-web";
 
 export const BASIC_JOB_FILTERS = [
   "partTime",
@@ -45,7 +46,21 @@ export const JobSearchProfileInputSchema = z.object({
 export const JobSourceInputSchema = z.object({
   profileId: z.string().min(1),
   label: z.string().trim().min(1),
-  url: z.string().trim().url(),
+  url: z
+    .string()
+    .trim()
+    .url()
+    .transform((value, context) => {
+      try {
+        return normalizeHttpUrl(value);
+      } catch (error) {
+        context.addIssue({
+          code: "custom",
+          message: error instanceof Error ? error.message : "Invalid source URL.",
+        });
+        return z.NEVER;
+      }
+    }),
 });
 
 export type JobSearchProfileInput = z.infer<typeof JobSearchProfileInputSchema>;
@@ -146,4 +161,3 @@ export function parseJobListingsFromHtml(
 
   return listings.slice(0, 50);
 }
-

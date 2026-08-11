@@ -1,16 +1,11 @@
 import { parseJobListingsFromHtml } from "./discovery";
+import { fetchPublicHtml } from "./public-web";
 import {
   completeDiscoveryRun,
   createDiscoveryRun,
   getEnabledSourcesForProfile,
   upsertDiscoveredListings,
 } from "./discovery-repo";
-
-const FETCH_HEADERS = {
-  "User-Agent":
-    "Mozilla/5.0 (compatible; ResumeBuilderBot/0.1; +https://github.com/Benjam1nChaqng/resume-builder)",
-  Accept: "text/html,application/xhtml+xml",
-};
 
 export async function runJobDiscovery({
   profileId,
@@ -26,13 +21,8 @@ export async function runJobDiscovery({
 
   for (const source of sources) {
     try {
-      const response = await fetch(source.url, { headers: FETCH_HEADERS });
-      if (!response.ok) {
-        errors.push(`${source.label}: HTTP ${response.status}`);
-        continue;
-      }
-      const html = await response.text();
-      const listings = parseJobListingsFromHtml(html, source.url);
+      const { html, finalUrl } = await fetchPublicHtml(source.url);
+      const listings = parseJobListingsFromHtml(html, finalUrl);
       discovered += await upsertDiscoveredListings({
         profileId,
         sourceId: source.id,
@@ -52,4 +42,3 @@ export async function runJobDiscovery({
   );
   return { discovered, errors };
 }
-

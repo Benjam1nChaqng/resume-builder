@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  JobSourceInputSchema,
   JobSearchProfileInputSchema,
   canonicalizeJobUrl,
   parseJobListingsFromHtml,
@@ -51,5 +52,22 @@ describe("job discovery helpers", () => {
     expect(parsed.remotePreference).toBe("any");
     expect(parsed.basicJobFilters.partTime).toBe(true);
   });
-});
 
+  it("normalizes source URLs and rejects non-HTTP protocols", () => {
+    expect(
+      JobSourceInputSchema.parse({
+        profileId: "profile-1",
+        label: "Acme careers",
+        url: "HTTPS://Careers.Example.COM/jobs/#openings",
+      }).url,
+    ).toBe("https://careers.example.com/jobs");
+
+    expect(() =>
+      JobSourceInputSchema.parse({
+        profileId: "profile-1",
+        label: "Local file",
+        url: "file:///tmp/jobs.html",
+      }),
+    ).toThrow();
+  });
+});
