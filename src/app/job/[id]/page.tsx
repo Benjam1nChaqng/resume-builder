@@ -171,6 +171,11 @@ export default async function JobPage({
           </p>
 
           <div className="mt-4 space-y-3">
+            {resumes.length === 0 && (
+              <div className="border-y border-dashed border-neutral-300 px-5 py-10 text-center text-sm text-neutral-500 dark:border-neutral-800">
+                Import a resume from the dashboard before running a fit check.
+              </div>
+            )}
             {resumes.map((r) => {
               const latestFit = latestFitsByResume.get(r.id);
               return (
@@ -254,6 +259,13 @@ export default async function JobPage({
               </form>
             )}
           </div>
+
+          {activeResume && !activeFit && (
+            <div className="mt-6 border-y border-dashed border-neutral-300 px-5 py-10 text-center text-sm text-neutral-500 dark:border-neutral-800">
+              No fit result for {activeResume.title} yet. Run a fit check to
+              compare its evidence with this job.
+            </div>
+          )}
 
           {activeFit?.status === "failed" ? (
             <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-5 dark:border-red-900 dark:bg-red-950/40">

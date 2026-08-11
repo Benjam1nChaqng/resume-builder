@@ -138,7 +138,12 @@ export default async function JobDiscoverPage({
                 </CardHeader>
                 <CardContent>
                   <JobSourceCreateForm profileId={activeProfile.id} />
-                  {activeProfile.sources.length > 0 && (
+                  {activeProfile.sources.length === 0 ? (
+                    <p className="mt-4 border-t border-neutral-200 pt-4 text-sm text-neutral-500 dark:border-neutral-800">
+                      Add a company career page or supported ATS board before
+                      running discovery.
+                    </p>
+                  ) : (
                     <ul className="mt-4 divide-y divide-neutral-200 border-t border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
                       {activeProfile.sources.map((source) => (
                         <li key={source.id} className="flex items-center gap-2 py-3">

@@ -99,7 +99,7 @@ Priority meanings:
 ### End-to-end user experience
 
 - [x] Add pending states that prevent duplicate profile, source, discovery, fit, and tailor submissions.
-- [ ] Add useful empty states for no profile, no source, no listing, no resume, and no fit result.
+- [x] Add useful empty states for no profile, no source, no listing, no resume, and no fit result.
 - [ ] Add field-level validation messages instead of uncaught server-action errors.
 - [x] Add success feedback after discovery, save, reject, fit, tailor, and download actions.
 - [ ] Make profile/source management usable on mobile and desktop.
