@@ -12,7 +12,10 @@ import {
   retryDiscoveryOperation,
   type DiscoveryRetryOptions,
 } from "./discovery-retry";
-import { discoverListingsFromSource } from "./source-adapters";
+import {
+  attributeListingsToSourceCompany,
+  discoverListingsFromSource,
+} from "./source-adapters";
 
 const SOURCE_CONCURRENCY = 3;
 
@@ -38,7 +41,10 @@ export async function runJobDiscovery({
         dependencies.retry,
       );
       const listings = filterAndRankJobListings(
-        rawListings,
+        attributeListingsToSourceCompany(rawListings, {
+          sourceUrl: source.url,
+          sourceLabel: source.label,
+        }),
         profile,
       );
       const discovered = await upsertDiscoveredListings({

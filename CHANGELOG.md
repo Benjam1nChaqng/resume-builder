@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-11: Added source-backed company attribution for dedicated ATS boards to improve listing display, fit context, and cross-source deduplication.
 - 2026-08-11: Made tailored resume creation an atomic Neon HTTP batch, preserved applied state in SQL, and enforced one application per user/job.
 - 2026-08-11: Added deterministic job-listing sort modes, status-aware 20-row pagination, shareable view URLs, and accessible paging controls.
 - 2026-08-11: Added inline accessible validation and safe duplicate, blocked-URL, ownership, and infrastructure feedback for profile/source creation.

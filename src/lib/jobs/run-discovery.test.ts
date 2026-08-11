@@ -6,6 +6,7 @@ const mockCreateRun = vi.fn();
 const mockCompleteRun = vi.fn();
 const mockUpsertListings = vi.fn();
 const mockDiscoverListings = vi.fn();
+const mockAttributeListings = vi.fn();
 
 vi.mock("./discovery-repo", () => ({
   getEnabledSourcesForProfile: mockGetSources,
@@ -17,6 +18,7 @@ vi.mock("./discovery-repo", () => ({
 
 vi.mock("./source-adapters", () => ({
   discoverListingsFromSource: mockDiscoverListings,
+  attributeListingsToSourceCompany: mockAttributeListings,
 }));
 
 beforeEach(() => {
@@ -26,6 +28,19 @@ beforeEach(() => {
   mockCompleteRun.mockReset();
   mockUpsertListings.mockReset();
   mockDiscoverListings.mockReset();
+  mockAttributeListings.mockReset();
+  mockAttributeListings.mockImplementation(
+    (
+      listings: Array<{ company: string | null }>,
+      { sourceUrl, sourceLabel }: { sourceUrl: string; sourceLabel: string },
+    ) =>
+      /greenhouse\.io|lever\.co|ashbyhq\.com/.test(sourceUrl)
+        ? listings.map((listing) => ({
+            ...listing,
+            company: listing.company ?? sourceLabel,
+          }))
+        : listings,
+  );
   mockGetProfile.mockResolvedValue({
     candidateName: "Maya",
     targetRoles: ["warehouse associate"],
@@ -203,5 +218,39 @@ describe("runJobDiscovery", () => {
         }),
       ],
     );
+  });
+
+  it("uses curated ATS source metadata for missing company names", async () => {
+    mockGetSources.mockResolvedValueOnce([
+      {
+        id: "source-1",
+        label: "Acme Corporation",
+        url: "https://boards.greenhouse.io/acme",
+      },
+    ]);
+    mockCreateRun.mockResolvedValueOnce("run-5");
+    mockDiscoverListings.mockResolvedValueOnce([
+      {
+        canonicalUrl: "https://boards.greenhouse.io/acme/jobs/1",
+        title: "Warehouse Associate",
+        company: null,
+        location: null,
+      },
+    ]);
+    mockUpsertListings.mockResolvedValueOnce(1);
+
+    const { runJobDiscovery } = await import("./run-discovery");
+    await runJobDiscovery({ profileId: "profile-1", userId: "user-1" });
+
+    expect(mockUpsertListings).toHaveBeenCalledWith({
+      profileId: "profile-1",
+      sourceId: "source-1",
+      listings: [
+        expect.objectContaining({
+          title: "Warehouse Associate",
+          company: "Acme Corporation",
+        }),
+      ],
+    });
   });
 });

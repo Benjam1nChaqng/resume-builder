@@ -142,6 +142,26 @@ export function detectSupportedJobSource(rawUrl: string): SupportedJobSource | n
   return greenhouseSource(url) ?? leverSource(url) ?? ashbySource(url);
 }
 
+export function attributeListingsToSourceCompany(
+  listings: DiscoveredListing[],
+  {
+    sourceUrl,
+    sourceLabel,
+  }: {
+    sourceUrl: string;
+    sourceLabel: string;
+  },
+): DiscoveredListing[] {
+  if (!detectSupportedJobSource(sourceUrl)) return listings;
+  const company = sourceLabel.trim();
+  if (!company) return listings;
+
+  return listings.map((listing) => ({
+    ...listing,
+    company: listing.company ?? company,
+  }));
+}
+
 function validDate(value: string | number | null | undefined): Date | null {
   if (value === null || value === undefined) return null;
   const date = new Date(value);

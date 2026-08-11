@@ -1,10 +1,50 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  attributeListingsToSourceCompany,
   detectSupportedJobSource,
   discoverListingsFromSource,
 } from "./source-adapters";
 
 describe("job source adapters", () => {
+  it("attributes missing company names only for dedicated supported boards", () => {
+    const listing = {
+      canonicalUrl: "https://jobs.lever.co/acme/1",
+      title: "Office Assistant",
+      company: null,
+      location: null,
+    };
+
+    expect(
+      attributeListingsToSourceCompany([listing], {
+        sourceUrl: "https://jobs.lever.co/acme",
+        sourceLabel: "Acme Corporation",
+      }),
+    ).toEqual([{ ...listing, company: "Acme Corporation" }]);
+    expect(
+      attributeListingsToSourceCompany([listing], {
+        sourceUrl: "https://example.com/job-search",
+        sourceLabel: "Local job search",
+      }),
+    ).toEqual([listing]);
+    expect(listing.company).toBeNull();
+  });
+
+  it("does not replace company metadata already supplied by a feed", () => {
+    const listing = {
+      canonicalUrl: "https://jobs.ashbyhq.com/acme/1",
+      title: "Barista",
+      company: "Acme Coffee",
+      location: null,
+    };
+
+    expect(
+      attributeListingsToSourceCompany([listing], {
+        sourceUrl: "https://jobs.ashbyhq.com/acme",
+        sourceLabel: "Acme Careers",
+      }),
+    ).toEqual([listing]);
+  });
+
   it("maps Greenhouse board and embed URLs to the public jobs API", () => {
     expect(
       detectSupportedJobSource("https://boards.greenhouse.io/acme/jobs/123"),

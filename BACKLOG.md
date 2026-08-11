@@ -45,7 +45,7 @@ Priority meanings:
 - [x] Add a dedicated adapter for public Ashby job boards.
 - [ ] Add a stable supported adapter for Workday tenant search pages.
 - [x] Extract location, employment type, compensation, and posted date when available.
-- [ ] Resolve company names from trusted source metadata when ATS feeds omit them.
+- [x] Resolve company names from trusted source metadata when ATS feeds omit them.
 - [x] Apply exclusions, remote, and basic-job filters, then rank by target roles, keywords, and location.
 - [x] Deduplicate by canonical URL and normalized company/title/location fingerprint.
 - [x] Return the number of rows actually inserted, not the number attempted.
