@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { selectJobSearchProfileAction } from "@/app/actions/jobs";
 
 export function JobSearchProfileSelector({
   profiles,
@@ -9,14 +10,16 @@ export function JobSearchProfileSelector({
   profiles: Array<{ id: string; candidateName: string }>;
   selectedId: string;
 }) {
-  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   return (
     <select
       aria-label="Search profile"
       value={selectedId}
-      onChange={(event) =>
-        router.push(`/jobs/discover?profile=${encodeURIComponent(event.target.value)}`)
-      }
+      disabled={isPending}
+      onChange={(event) => {
+        const profileId = event.target.value;
+        startTransition(() => selectJobSearchProfileAction(profileId));
+      }}
       className="h-9 min-w-48 rounded-md border border-neutral-200 bg-white px-3 text-sm dark:border-neutral-800 dark:bg-neutral-950"
     >
       {profiles.map((profile) => (

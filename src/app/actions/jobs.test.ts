@@ -13,6 +13,10 @@ const mockJobSearchProfileSafeParse = vi.fn();
 const mockJobSourceSafeParse = vi.fn();
 const mockJobSourceUpdateSafeParse = vi.fn();
 const mockRunResumeJobFit = vi.fn();
+const mockRequireProfileOwner = vi.fn();
+const mockCookieSet = vi.fn();
+const mockCookieGet = vi.fn();
+const mockCookieDelete = vi.fn();
 const mockRedirect = vi.fn((url: string) => {
   const err = new Error(`REDIRECT:${url}`);
   // Tag like Next.js redirect throws (the test only needs to verify the redirect path).
@@ -21,6 +25,11 @@ const mockRedirect = vi.fn((url: string) => {
 
 vi.mock("next/headers", () => ({
   headers: async () => new Headers(),
+  cookies: async () => ({
+    set: mockCookieSet,
+    get: mockCookieGet,
+    delete: mockCookieDelete,
+  }),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -61,6 +70,7 @@ vi.mock("@/lib/jobs/discovery-repo", () => ({
   updateJobSearchProfileForUser: vi.fn(),
   updateJobSourceForUser: mockUpdateJobSource,
   updateListingStatusForUser: vi.fn(),
+  requireProfileOwner: mockRequireProfileOwner,
 }));
 
 vi.mock("@/lib/jobs/fit", () => ({
@@ -94,6 +104,10 @@ beforeEach(() => {
   mockJobSourceSafeParse.mockReset();
   mockJobSourceUpdateSafeParse.mockReset();
   mockRunResumeJobFit.mockReset();
+  mockRequireProfileOwner.mockReset();
+  mockCookieSet.mockReset();
+  mockCookieGet.mockReset();
+  mockCookieDelete.mockReset();
   mockRedirect.mockClear();
 });
 
@@ -207,6 +221,44 @@ describe("createJobSearchProfileAction", () => {
       createJobSearchProfileAction(initialDiscoveryFormState, new FormData()),
     ).rejects.toThrow(/REDIRECT:\/jobs\/discover\?profile=profile-1/);
     expect(mockCreateJobSearchProfile).toHaveBeenCalledWith("user-1", input);
+    expect(mockCookieSet).toHaveBeenCalledWith(
+      "selected-job-search-profile",
+      "user-1:profile-1",
+      expect.objectContaining({ httpOnly: true, sameSite: "lax", path: "/" }),
+    );
+  });
+});
+
+describe("selectJobSearchProfileAction", () => {
+  it("persists an owned selection before redirecting", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    mockRequireProfileOwner.mockResolvedValueOnce(undefined);
+
+    const { selectJobSearchProfileAction } = await import("./jobs");
+    await expect(
+      selectJobSearchProfileAction("profile-2"),
+    ).rejects.toThrow(/REDIRECT:\/jobs\/discover\?profile=profile-2/);
+
+    expect(mockRequireProfileOwner).toHaveBeenCalledWith("profile-2", "user-1");
+    expect(mockCookieSet).toHaveBeenCalledWith(
+      "selected-job-search-profile",
+      "user-1:profile-2",
+      expect.objectContaining({ httpOnly: true }),
+    );
+  });
+
+  it("does not persist a profile the user does not own", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    mockRequireProfileOwner.mockRejectedValueOnce(
+      new Error("Job search profile not found."),
+    );
+
+    const { selectJobSearchProfileAction } = await import("./jobs");
+    await expect(
+      selectJobSearchProfileAction("profile-foreign"),
+    ).rejects.toThrow(/not found/);
+    expect(mockCookieSet).not.toHaveBeenCalled();
+    expect(mockRedirect).not.toHaveBeenCalled();
   });
 });
 

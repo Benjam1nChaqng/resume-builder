@@ -1,6 +1,6 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { createJobForUser } from "@/lib/jobs/create";
@@ -16,6 +16,7 @@ import {
   deleteJobSearchProfileForUser,
   deleteJobSourceForUser,
   setJobSourceEnabledForUser,
+  requireProfileOwner,
   updateJobSearchProfileForUser,
   updateJobSourceForUser,
   updateListingStatusForUser,
@@ -26,6 +27,11 @@ import {
 } from "@/lib/jobs/fit";
 import { runJobDiscovery } from "@/lib/jobs/run-discovery";
 import { saveDiscoveredListingForUser } from "@/lib/jobs/save-listing";
+import {
+  parseSelectedProfileCookie,
+  SELECTED_JOB_PROFILE_COOKIE,
+  serializeSelectedProfileCookie,
+} from "@/lib/jobs/profile-selection";
 import {
   createTailoredResumeCopy,
   type TailoredBulletChange,
@@ -45,6 +51,24 @@ const EMPTY_DISCOVERY_FORM_STATE: JobDiscoveryFormState = {
   fieldErrors: {},
   formError: null,
 };
+
+async function persistSelectedProfile(
+  userId: string,
+  profileId: string,
+): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(
+    SELECTED_JOB_PROFILE_COOKIE,
+    serializeSelectedProfileCookie(userId, profileId),
+    {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+    },
+  );
+}
 
 export async function createJobFromUrlAction(formData: FormData): Promise<void> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -174,6 +198,7 @@ export async function createJobSearchProfileAction(
       values,
     };
   }
+  await persistSelectedProfile(userId, profileId);
   redirect(`/jobs/discover?profile=${profileId}`);
 }
 
@@ -198,7 +223,25 @@ export async function deleteJobSearchProfileAction(
 ): Promise<void> {
   const userId = await requireSessionUserId();
   await deleteJobSearchProfileForUser(userId, profileId);
+  const cookieStore = await cookies();
+  if (
+    parseSelectedProfileCookie(
+      cookieStore.get(SELECTED_JOB_PROFILE_COOKIE)?.value,
+      userId,
+    ) === profileId
+  ) {
+    cookieStore.delete(SELECTED_JOB_PROFILE_COOKIE);
+  }
   redirect("/jobs/discover");
+}
+
+export async function selectJobSearchProfileAction(
+  profileId: string,
+): Promise<void> {
+  const userId = await requireSessionUserId();
+  await requireProfileOwner(profileId, userId);
+  await persistSelectedProfile(userId, profileId);
+  redirect(`/jobs/discover?profile=${encodeURIComponent(profileId)}`);
 }
 
 export async function createJobSourceAction(

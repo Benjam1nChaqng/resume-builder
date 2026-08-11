@@ -36,7 +36,7 @@ Priority meanings:
 - [x] Add request timeout, response-size limit, and content-type validation.
 - [x] Surface duplicate-source, invalid-source, and ownership errors in the UI.
 - [x] Add a profile selector that does not silently choose only the newest profile.
-- [ ] Persist a selected or default search profile per user.
+- [x] Persist a selected or default search profile per user.
 
 ### Discovery quality
 

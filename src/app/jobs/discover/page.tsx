@@ -1,4 +1,4 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import type { ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
@@ -22,7 +22,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { selectActiveProfile } from "@/lib/jobs/profile-selection";
+import {
+  parseSelectedProfileCookie,
+  SELECTED_JOB_PROFILE_COOKIE,
+  selectActiveProfile,
+} from "@/lib/jobs/profile-selection";
 import {
   createJobListingView,
   parseJobListingSort,
@@ -48,7 +52,15 @@ export default async function JobDiscoverPage({
     sort: requestedSort,
     page: requestedPage,
   } = await searchParams;
-  const activeProfile = selectActiveProfile(profiles, requestedProfileId);
+  const selectedProfileId = parseSelectedProfileCookie(
+    (await cookies()).get(SELECTED_JOB_PROFILE_COOKIE)?.value,
+    session.user.id,
+  );
+  const activeProfile = selectActiveProfile(
+    profiles,
+    requestedProfileId,
+    selectedProfileId,
+  );
   const listingStatuses = [
     "all",
     "discovered",
