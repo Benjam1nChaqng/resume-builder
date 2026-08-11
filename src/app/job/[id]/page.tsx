@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { application, job, resumeJobFit } from "@/lib/db/jobs-schema";
 import { resume } from "@/lib/db/resume-schema";
+import { indexLatestFitsByResume } from "@/lib/jobs/fit-history";
 import { JobTailorPanel } from "@/components/job-tailor-panel";
 import {
   markJobAppliedAction,
@@ -78,12 +79,15 @@ export default async function JobPage({
         ),
       ),
   ]);
+  const latestFitsByResume = indexLatestFitsByResume(fits);
   const applicationRecord = applications[0] ?? null;
   const tailoredResumeId = applications.find((a) => a.resumeId)?.resumeId ?? null;
   const activeResumeId = resumes.some((resumeRow) => resumeRow.id === requestedResumeId)
     ? requestedResumeId!
     : (fits[0]?.resumeId ?? resumes[0]?.id ?? null);
-  const activeFit = fits.find((fit) => fit.resumeId === activeResumeId) ?? null;
+  const activeFit = activeResumeId
+    ? (latestFitsByResume.get(activeResumeId) ?? null)
+    : null;
   const activeResume = resumes.find((resumeRow) => resumeRow.id === activeResumeId);
 
   const salary = formatSalary(jd.salaryMin, jd.salaryMax);
@@ -180,9 +184,9 @@ export default async function JobPage({
                   >
                     {r.title}
                   </Link>
-                  {fits.find((fit) => fit.resumeId === r.id) && (
+                  {latestFitsByResume.get(r.id) && (
                     <p className="mt-1 text-xs text-neutral-500">
-                      Latest score: {fits.find((fit) => fit.resumeId === r.id)!.score}/100
+                      Latest score: {latestFitsByResume.get(r.id)!.score}/100
                     </p>
                   )}
                 </div>

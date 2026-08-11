@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -61,6 +62,10 @@ export const application = pgTable(
   (table) => [
     index("application_user_id_idx").on(table.userId),
     index("application_job_id_idx").on(table.jobId),
+    check(
+      "application_status_check",
+      sql`${table.status} in ('draft', 'tailored', 'applied')`,
+    ),
   ],
 );
 
@@ -131,7 +136,13 @@ export const jobSearchProfile = pgTable(
       .$onUpdate(() => new Date())
       .notNull(),
   },
-  (table) => [index("job_search_profile_user_id_idx").on(table.userId)],
+  (table) => [
+    index("job_search_profile_user_id_idx").on(table.userId),
+    check(
+      "job_search_profile_remote_preference_check",
+      sql`${table.remotePreference} in ('any', 'remote', 'hybrid', 'onsite')`,
+    ),
+  ],
 );
 
 export const jobSource = pgTable(
@@ -169,7 +180,17 @@ export const jobDiscoveryRun = pgTable(
       .default(sql`'[]'::jsonb`)
       .notNull(),
   },
-  (table) => [index("job_discovery_run_profile_id_idx").on(table.profileId)],
+  (table) => [
+    index("job_discovery_run_profile_id_idx").on(table.profileId),
+    check(
+      "job_discovery_run_status_check",
+      sql`${table.status} in ('running', 'completed', 'partial', 'failed')`,
+    ),
+    check(
+      "job_discovery_run_inserted_count_check",
+      sql`${table.insertedCount} >= 0`,
+    ),
+  ],
 );
 
 export const jobListing = pgTable(
@@ -201,6 +222,14 @@ export const jobListing = pgTable(
     uniqueIndex("job_listing_profile_url_unique").on(
       table.profileId,
       table.canonicalUrl,
+    ),
+    check(
+      "job_listing_status_check",
+      sql`${table.status} in ('discovered', 'saved', 'rejected', 'tailored', 'applied')`,
+    ),
+    check(
+      "job_listing_match_score_check",
+      sql`${table.matchScore} between 0 and 100`,
     ),
   ],
 );
@@ -241,6 +270,10 @@ export const resumeJobFit = pgTable(
   (table) => [
     index("resume_job_fit_user_id_idx").on(table.userId),
     index("resume_job_fit_job_resume_idx").on(table.jobId, table.resumeId),
+    check(
+      "resume_job_fit_score_check",
+      sql`${table.score} between 0 and 100`,
+    ),
   ],
 );
 

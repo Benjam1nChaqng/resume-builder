@@ -33,6 +33,40 @@ type SourceExperience = {
   bullets: Array<{ id: string }>;
 };
 
+type SourceBullet = {
+  id: string;
+  text: string;
+  originalText: string | null;
+};
+
+type ApplicationSnapshot = {
+  id: string;
+  resumeId: string | null;
+  status: string;
+} | null;
+
+type ListingSnapshot = {
+  id: string;
+  status: string;
+};
+
+type TailoredLinkOperations = {
+  updateApplication: (
+    applicationId: string,
+    resumeId: string | null,
+    status: string,
+  ) => Promise<void>;
+  insertApplication: (input: {
+    id: string;
+    userId: string;
+    jobId: string;
+    resumeId: string;
+    status: string;
+  }) => Promise<void>;
+  deleteApplication: (applicationId: string) => Promise<void>;
+  updateListingStatus: (listingId: string, status: string) => Promise<void>;
+};
+
 export function buildTailoredBulletReplacements(
   experiences: SourceExperience[],
   changes: TailoredBulletChange[],
@@ -57,6 +91,92 @@ export function buildTailoredBulletReplacements(
     replacements.set(change.bulletId, change.text);
   }
   return replacements;
+}
+
+export function buildTailoredBulletCopies({
+  sourceBullets,
+  replacements,
+  experienceId,
+  idFactory = randomUUID,
+}: {
+  sourceBullets: SourceBullet[];
+  replacements: Map<string, string>;
+  experienceId: string;
+  idFactory?: () => string;
+}) {
+  return sourceBullets.map((sourceBullet, sortOrder) => ({
+    id: idFactory(),
+    experienceId,
+    text: replacements.get(sourceBullet.id) ?? sourceBullet.text,
+    originalText: sourceBullet.originalText ?? sourceBullet.text,
+    sortOrder,
+  }));
+}
+
+export async function linkTailoredResumeWithCompensation({
+  existingApplication,
+  listings,
+  applicationId,
+  userId,
+  jobId,
+  resumeId,
+  operations,
+}: {
+  existingApplication: ApplicationSnapshot;
+  listings: ListingSnapshot[];
+  applicationId: string;
+  userId: string;
+  jobId: string;
+  resumeId: string;
+  operations: TailoredLinkOperations;
+}): Promise<void> {
+  let applicationMutation: "created" | "updated" | null = null;
+  const mutatedListings: ListingSnapshot[] = [];
+
+  try {
+    const nextApplicationStatus =
+      existingApplication?.status === "applied" ? "applied" : "tailored";
+    if (existingApplication) {
+      await operations.updateApplication(
+        existingApplication.id,
+        resumeId,
+        nextApplicationStatus,
+      );
+      applicationMutation = "updated";
+    } else {
+      await operations.insertApplication({
+        id: applicationId,
+        userId,
+        jobId,
+        resumeId,
+        status: "tailored",
+      });
+      applicationMutation = "created";
+    }
+
+    for (const listing of listings) {
+      if (listing.status === "applied") continue;
+      await operations.updateListingStatus(listing.id, "tailored");
+      mutatedListings.push(listing);
+    }
+  } catch (error) {
+    const rollbacks: Promise<void>[] = mutatedListings.map((listing) =>
+      operations.updateListingStatus(listing.id, listing.status),
+    );
+    if (applicationMutation === "created") {
+      rollbacks.push(operations.deleteApplication(applicationId));
+    } else if (applicationMutation === "updated" && existingApplication) {
+      rollbacks.push(
+        operations.updateApplication(
+          existingApplication.id,
+          existingApplication.resumeId,
+          existingApplication.status,
+        ),
+      );
+    }
+    await Promise.allSettled(rollbacks);
+    throw error;
+  }
 }
 
 export function buildTailoredResumeTitle({
@@ -141,17 +261,15 @@ export async function createTailoredResumeCopy({
           sortOrder: i,
         })
         .returning({ id: experience.id });
-      if (!newExp) continue;
+      if (!newExp) throw new Error("Unable to copy resume experience.");
 
       if (exp.bullets.length > 0) {
         await db.insert(bullet).values(
-          exp.bullets.map((b, j) => ({
-            id: randomUUID(),
+          buildTailoredBulletCopies({
+            sourceBullets: exp.bullets,
+            replacements,
             experienceId: newExp.id,
-            text: replacements.get(b.id) ?? b.text,
-            originalText: b.originalText ?? b.text,
-            sortOrder: j,
-          })),
+          }),
         );
       }
     }
@@ -198,30 +316,48 @@ export async function createTailoredResumeCopy({
     }
 
     const existing = await db
-      .select({ id: application.id })
+      .select({
+        id: application.id,
+        resumeId: application.resumeId,
+        status: application.status,
+      })
       .from(application)
       .where(and(eq(application.jobId, jobId), eq(application.userId, userId)))
       .limit(1);
-
-    if (existing[0]) {
-      await db
-        .update(application)
-        .set({ resumeId: newResume.id, status: "tailored" })
-        .where(eq(application.id, existing[0].id));
-    } else {
-      await db.insert(application).values({
-        id: randomUUID(),
-        userId,
-        jobId,
-        resumeId: newResume.id,
-        status: "tailored",
-      });
-    }
-
-    await db
-      .update(jobListing)
-      .set({ status: "tailored" })
+    const listings = await db
+      .select({ id: jobListing.id, status: jobListing.status })
+      .from(jobListing)
       .where(eq(jobListing.jobId, jobId));
+    const applicationId = randomUUID();
+
+    await linkTailoredResumeWithCompensation({
+      existingApplication: existing[0] ?? null,
+      listings,
+      applicationId,
+      userId,
+      jobId,
+      resumeId: newResume.id,
+      operations: {
+        updateApplication: async (id, linkedResumeId, status) => {
+          await db
+            .update(application)
+            .set({ resumeId: linkedResumeId, status })
+            .where(eq(application.id, id));
+        },
+        insertApplication: async (values) => {
+          await db.insert(application).values(values);
+        },
+        deleteApplication: async (id) => {
+          await db.delete(application).where(eq(application.id, id));
+        },
+        updateListingStatus: async (id, status) => {
+          await db
+            .update(jobListing)
+            .set({ status })
+            .where(eq(jobListing.id, id));
+        },
+      },
+    });
 
     return newResume.id;
   } catch (err) {
