@@ -16,7 +16,9 @@ export const ResumeJobFitSchema = z.object({
     )
     .default([]),
   missingRequirements: z.array(z.string().min(1)).default([]),
+  missingPreferredRequirements: z.array(z.string().min(1)).default([]),
   concerns: z.array(z.string().min(1)).default([]),
+  unsupportedClaims: z.array(z.string().min(1)).default([]),
   recommendations: z.array(z.string().min(1)).default([]),
 });
 

@@ -265,7 +265,15 @@ export const resumeJobFit = pgTable(
       .$type<string[]>()
       .default(sql`'[]'::jsonb`)
       .notNull(),
+    missingPreferredRequirements: jsonb("missing_preferred_requirements")
+      .$type<string[]>()
+      .default(sql`'[]'::jsonb`)
+      .notNull(),
     concerns: jsonb("concerns")
+      .$type<string[]>()
+      .default(sql`'[]'::jsonb`)
+      .notNull(),
+    unsupportedClaims: jsonb("unsupported_claims")
       .$type<string[]>()
       .default(sql`'[]'::jsonb`)
       .notNull(),

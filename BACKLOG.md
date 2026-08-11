@@ -75,7 +75,7 @@ Priority meanings:
 - [x] Verify job and resume ownership belong to the same authenticated user in one service boundary.
 - [x] Persist fit-check failure state and safe retry messaging.
 - [x] Include requirement-level source evidence, resume section, and confidence in the fit contract.
-- [ ] Separate hard requirements, preferred requirements, concerns, and unsupported claims.
+- [x] Separate hard requirements, preferred requirements, concerns, and unsupported claims.
 - [x] Add a deterministic non-LLM baseline score for testing and comparison.
 - [x] Show fit results for the selected resume instead of only the latest job-wide result.
 - [x] Let users accept or reject individual proposed bullet changes.

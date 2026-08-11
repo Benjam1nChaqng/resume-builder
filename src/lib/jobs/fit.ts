@@ -93,7 +93,9 @@ export async function runResumeJobFit({
     score: fit.score,
     matchingEvidence: fit.matchingEvidence,
     missingRequirements: fit.missingRequirements,
+    missingPreferredRequirements: fit.missingPreferredRequirements,
     concerns,
+    unsupportedClaims: fit.unsupportedClaims,
     recommendations: fit.recommendations,
     modelMetadata: {
       model: MODELS.REVIEWER,

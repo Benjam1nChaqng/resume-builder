@@ -23,7 +23,7 @@ vi.mock("@/lib/resumes/access", () => ({
 }));
 vi.mock("@/lib/ai/resume-fit", () => ({
   analyzeResumeFit: mockAnalyzeResumeFit,
-  RESUME_FIT_RUBRIC_VERSION: "resume-fit-v1",
+  RESUME_FIT_RUBRIC_VERSION: "resume-fit-v2",
 }));
 vi.mock("@/lib/resumes/render", () => ({
   loadRenderableResume: mockLoadRenderableResume,
@@ -92,7 +92,7 @@ describe("runResumeJobFit", () => {
         score: null,
         modelMetadata: expect.objectContaining({
           model: expect.any(String),
-          rubricVersion: "resume-fit-v1",
+          rubricVersion: "resume-fit-v2",
           baselineScore: expect.any(Number),
         }),
       }),
@@ -116,7 +116,9 @@ describe("runResumeJobFit", () => {
         },
       ],
       missingRequirements: [],
+      missingPreferredRequirements: ["Zendesk"],
       concerns: [],
+      unsupportedClaims: ["Do not claim Zendesk experience"],
       recommendations: [],
     });
     mockValues.mockResolvedValueOnce(undefined);
@@ -134,6 +136,8 @@ describe("runResumeJobFit", () => {
         matchingEvidence: expect.arrayContaining([
           expect.objectContaining({ confidence: "high" }),
         ]),
+        missingPreferredRequirements: ["Zendesk"],
+        unsupportedClaims: ["Do not claim Zendesk experience"],
       }),
     );
   });

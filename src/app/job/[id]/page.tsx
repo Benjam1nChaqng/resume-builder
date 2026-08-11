@@ -303,8 +303,19 @@ export default async function JobPage({
                       "]",
                   )}
                 />
-                <ListBlock title="Missing requirements" items={activeFit.missingRequirements} />
+                <ListBlock
+                  title="Missing hard requirements"
+                  items={activeFit.missingRequirements}
+                />
+                <ListBlock
+                  title="Missing preferred requirements"
+                  items={activeFit.missingPreferredRequirements}
+                />
                 <ListBlock title="Concerns" items={activeFit.concerns} />
+                <ListBlock
+                  title="Unsupported claims to avoid"
+                  items={activeFit.unsupportedClaims}
+                />
                 <ListBlock title="Recommendations" items={activeFit.recommendations} />
               </div>
             </div>
