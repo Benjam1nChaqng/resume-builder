@@ -43,8 +43,7 @@ export const JobSearchProfileInputSchema = z.object({
   }),
 });
 
-export const JobSourceInputSchema = z.object({
-  profileId: z.string().min(1),
+const JobSourceDetailsSchema = z.object({
   label: z.string().trim().min(1),
   url: z
     .string()
@@ -63,8 +62,15 @@ export const JobSourceInputSchema = z.object({
     }),
 });
 
+export const JobSourceInputSchema = JobSourceDetailsSchema.extend({
+  profileId: z.string().min(1),
+});
+
+export const JobSourceUpdateSchema = JobSourceDetailsSchema;
+
 export type JobSearchProfileInput = z.infer<typeof JobSearchProfileInputSchema>;
 export type JobSourceInput = z.infer<typeof JobSourceInputSchema>;
+export type JobSourceUpdate = z.infer<typeof JobSourceUpdateSchema>;
 
 export type DiscoveredListing = {
   canonicalUrl: string;

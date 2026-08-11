@@ -28,7 +28,7 @@ Priority meanings:
 
 - [x] Add profile update and delete actions with ownership checks.
 - [x] Add source enable, disable, and delete actions with ownership checks.
-- [ ] Add source label and URL editing with ownership checks.
+- [x] Add source label and URL editing with ownership checks.
 - [x] Normalize and canonicalize source URLs before uniqueness checks.
 - [x] Reject non-HTTP source protocols.
 - [x] Block localhost, link-local, private-network, and metadata-service targets to prevent SSRF.

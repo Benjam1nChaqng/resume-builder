@@ -8,6 +8,7 @@ import { markJobApplied } from "@/lib/jobs/application-state";
 import {
   JobSearchProfileInputSchema,
   JobSourceInputSchema,
+  JobSourceUpdateSchema,
 } from "@/lib/jobs/discovery";
 import {
   createJobSearchProfile,
@@ -16,6 +17,7 @@ import {
   deleteJobSourceForUser,
   setJobSourceEnabledForUser,
   updateJobSearchProfileForUser,
+  updateJobSourceForUser,
   updateListingStatusForUser,
 } from "@/lib/jobs/discovery-repo";
 import { runResumeJobFit } from "@/lib/jobs/fit";
@@ -159,6 +161,37 @@ export async function deleteJobSourceAction(sourceId: string): Promise<void> {
   const userId = await requireSessionUserId();
   const profileId = await deleteJobSourceForUser(userId, sourceId);
   redirect(`/jobs/discover?profile=${profileId}`);
+}
+
+export type UpdateJobSourceActionResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export async function updateJobSourceAction(
+  sourceId: string,
+  label: string,
+  url: string,
+): Promise<UpdateJobSourceActionResult> {
+  const userId = await requireSessionUserId();
+  const parsed = JobSourceUpdateSchema.safeParse({ label, url });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Enter a valid source.",
+    };
+  }
+  try {
+    await updateJobSourceForUser(userId, sourceId, parsed.data);
+    return { ok: true };
+  } catch (error) {
+    const message =
+      error instanceof Error &&
+      (error.message.includes("already added") ||
+        error.message.includes("Private or local"))
+        ? error.message
+        : "Unable to update this source.";
+    return { ok: false, error: message };
+  }
 }
 
 export async function runJobDiscoveryAction(formData: FormData): Promise<void> {

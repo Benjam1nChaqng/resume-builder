@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createJobSourceForUser,
   setJobSourceEnabledForUser,
+  updateJobSourceForUser,
 } from "./discovery-repo";
 
 const {
@@ -14,6 +15,8 @@ const {
   mockOnConflictDoNothing,
   mockValues,
   mockInsert,
+  mockSet,
+  mockUpdateWhere,
   mockUpdate,
   mockAssertPublicHttpUrl,
 } = vi.hoisted(() => {
@@ -26,7 +29,9 @@ const {
   const mockOnConflictDoNothing = vi.fn(() => ({ returning: mockReturning }));
   const mockValues = vi.fn(() => ({ onConflictDoNothing: mockOnConflictDoNothing }));
   const mockInsert = vi.fn(() => ({ values: mockValues }));
-  const mockUpdate = vi.fn();
+  const mockUpdateWhere = vi.fn();
+  const mockSet = vi.fn(() => ({ where: mockUpdateWhere }));
+  const mockUpdate = vi.fn(() => ({ set: mockSet }));
   const mockAssertPublicHttpUrl = vi.fn();
   return {
     mockLimit,
@@ -38,6 +43,8 @@ const {
     mockOnConflictDoNothing,
     mockValues,
     mockInsert,
+    mockSet,
+    mockUpdateWhere,
     mockUpdate,
     mockAssertPublicHttpUrl,
   };
@@ -65,7 +72,9 @@ beforeEach(() => {
   mockOnConflictDoNothing.mockReset();
   mockValues.mockClear();
   mockInsert.mockClear();
-  mockUpdate.mockReset();
+  mockSet.mockClear();
+  mockUpdateWhere.mockReset();
+  mockUpdate.mockClear();
   mockAssertPublicHttpUrl.mockReset();
 });
 
@@ -118,5 +127,46 @@ describe("setJobSourceEnabledForUser", () => {
     ).rejects.toThrow(/source not found/i);
 
     expect(mockUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateJobSourceForUser", () => {
+  const input = {
+    label: "Acme jobs",
+    url: "https://acme.example/jobs",
+  };
+
+  it("checks ownership before validating or updating the URL", async () => {
+    mockLimit.mockResolvedValueOnce([]);
+
+    await expect(
+      updateJobSourceForUser("user-2", "source-1", input),
+    ).rejects.toThrow(/source not found/i);
+
+    expect(mockAssertPublicHttpUrl).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("updates an owned source after public URL validation", async () => {
+    mockLimit.mockResolvedValueOnce([{ profileId: "profile-1" }]);
+    mockAssertPublicHttpUrl.mockResolvedValueOnce(new URL(input.url));
+    mockUpdateWhere.mockResolvedValueOnce(undefined);
+
+    await expect(
+      updateJobSourceForUser("user-1", "source-1", input),
+    ).resolves.toBe("profile-1");
+
+    expect(mockAssertPublicHttpUrl).toHaveBeenCalledWith(input.url);
+    expect(mockSet).toHaveBeenCalledWith(input);
+  });
+
+  it("returns a useful duplicate-source error", async () => {
+    mockLimit.mockResolvedValueOnce([{ profileId: "profile-1" }]);
+    mockAssertPublicHttpUrl.mockResolvedValueOnce(new URL(input.url));
+    mockUpdateWhere.mockRejectedValueOnce({ code: "23505" });
+
+    await expect(
+      updateJobSourceForUser("user-1", "source-1", input),
+    ).rejects.toThrow(/already added/i);
   });
 });

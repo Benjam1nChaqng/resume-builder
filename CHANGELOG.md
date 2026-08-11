@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-11: Added owned job-source editing with URL normalization, SSRF validation, duplicate handling, and inline dialog feedback.
 - 2026-08-11: Added profile-scoped employer/title/location fingerprint deduplication with migration `0008`, while retaining canonical source links on saved jobs.
 - 2026-08-11: Added database state/score constraints, immutable fit-history selection, source-preserving copy tests, and compensating rollback for failed tailored-resume links.
 - 2026-08-11: Verified the complete local code gate with strict typecheck, ESLint, 111 Vitest tests, and a successful production Next build.

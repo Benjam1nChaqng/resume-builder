@@ -12,6 +12,7 @@ import type {
   DiscoveredListing,
   JobSearchProfileInput,
   JobSourceInput,
+  JobSourceUpdate,
 } from "./discovery";
 import { JobSearchProfileInputSchema } from "./discovery";
 import { buildJobListingFingerprint } from "./discovery";
@@ -97,6 +98,32 @@ export async function deleteJobSourceForUser(
 ): Promise<string> {
   const source = await requireSourceOwner(sourceId, userId);
   await db.delete(jobSource).where(eq(jobSource.id, sourceId));
+  return source.profileId;
+}
+
+export async function updateJobSourceForUser(
+  userId: string,
+  sourceId: string,
+  input: JobSourceUpdate,
+): Promise<string> {
+  const source = await requireSourceOwner(sourceId, userId);
+  await assertPublicHttpUrl(input.url);
+  try {
+    await db
+      .update(jobSource)
+      .set({ label: input.label, url: input.url })
+      .where(eq(jobSource.id, sourceId));
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === "23505"
+    ) {
+      throw new Error("This source is already added to the profile.");
+    }
+    throw error;
+  }
   return source.profileId;
 }
 

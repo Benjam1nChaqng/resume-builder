@@ -171,6 +171,8 @@ export default async function JobDiscoverPage({
                           <JobSourceActions
                             sourceId={source.id}
                             enabled={source.enabled}
+                            sourceLabel={source.label}
+                            sourceUrl={source.url}
                           />
                         </li>
                       ))}

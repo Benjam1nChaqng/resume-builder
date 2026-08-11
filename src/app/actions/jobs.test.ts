@@ -6,6 +6,8 @@ const mockTailorResumeForJob = vi.fn();
 const mockSaveDiscoveredListing = vi.fn();
 const mockCreateTailoredResumeCopy = vi.fn();
 const mockMarkJobApplied = vi.fn();
+const mockUpdateJobSource = vi.fn();
+const mockJobSourceUpdateSafeParse = vi.fn();
 const mockRedirect = vi.fn((url: string) => {
   const err = new Error(`REDIRECT:${url}`);
   // Tag like Next.js redirect throws (the test only needs to verify the redirect path).
@@ -39,6 +41,7 @@ vi.mock("@/lib/jobs/application-state", () => ({
 vi.mock("@/lib/jobs/discovery", () => ({
   JobSearchProfileInputSchema: { parse: vi.fn((value) => value) },
   JobSourceInputSchema: { parse: vi.fn((value) => value) },
+  JobSourceUpdateSchema: { safeParse: mockJobSourceUpdateSafeParse },
 }));
 
 vi.mock("@/lib/jobs/discovery-repo", () => ({
@@ -48,6 +51,7 @@ vi.mock("@/lib/jobs/discovery-repo", () => ({
   deleteJobSourceForUser: vi.fn(),
   setJobSourceEnabledForUser: vi.fn(),
   updateJobSearchProfileForUser: vi.fn(),
+  updateJobSourceForUser: mockUpdateJobSource,
   updateListingStatusForUser: vi.fn(),
 }));
 
@@ -74,6 +78,8 @@ beforeEach(() => {
   mockSaveDiscoveredListing.mockReset();
   mockCreateTailoredResumeCopy.mockReset();
   mockMarkJobApplied.mockReset();
+  mockUpdateJobSource.mockReset();
+  mockJobSourceUpdateSafeParse.mockReset();
   mockRedirect.mockClear();
 });
 
@@ -184,5 +190,43 @@ describe("markJobAppliedAction", () => {
       /REDIRECT:\/job\/job-1/,
     );
     expect(mockMarkJobApplied).toHaveBeenCalledWith({ jobId: "job-1" });
+  });
+});
+
+describe("updateJobSourceAction", () => {
+  it("validates and updates an owned source without exposing FormData internals", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    mockJobSourceUpdateSafeParse.mockReturnValueOnce({
+      success: true,
+      data: { label: "Acme", url: "https://acme.example/jobs" },
+    });
+    mockUpdateJobSource.mockResolvedValueOnce("profile-1");
+
+    const { updateJobSourceAction } = await import("./jobs");
+    await expect(
+      updateJobSourceAction(
+        "source-1",
+        "Acme",
+        "https://acme.example/jobs",
+      ),
+    ).resolves.toEqual({ ok: true });
+    expect(mockUpdateJobSource).toHaveBeenCalledWith("user-1", "source-1", {
+      label: "Acme",
+      url: "https://acme.example/jobs",
+    });
+  });
+
+  it("returns validation feedback without reaching the repository", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    mockJobSourceUpdateSafeParse.mockReturnValueOnce({
+      success: false,
+      error: { issues: [{ message: "Invalid URL" }] },
+    });
+
+    const { updateJobSourceAction } = await import("./jobs");
+    await expect(
+      updateJobSourceAction("source-1", "Acme", "not-a-url"),
+    ).resolves.toEqual({ ok: false, error: "Invalid URL" });
+    expect(mockUpdateJobSource).not.toHaveBeenCalled();
   });
 });
