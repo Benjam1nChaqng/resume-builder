@@ -219,7 +219,9 @@ describe("createJobSearchProfileAction", () => {
     const { createJobSearchProfileAction } = await import("./jobs");
     await expect(
       createJobSearchProfileAction(initialDiscoveryFormState, new FormData()),
-    ).rejects.toThrow(/REDIRECT:\/jobs\/discover\?profile=profile-1/);
+    ).rejects.toThrow(
+      /REDIRECT:\/jobs\/discover\?profile=profile-1&notice=profile-created/,
+    );
     expect(mockCreateJobSearchProfile).toHaveBeenCalledWith("user-1", input);
     expect(mockCookieSet).toHaveBeenCalledWith(
       "selected-job-search-profile",
@@ -340,7 +342,7 @@ describe("saveDiscoveredListingAction", () => {
 
     const { saveDiscoveredListingAction } = await import("./jobs");
     await expect(saveDiscoveredListingAction("listing-1")).rejects.toThrow(
-      /REDIRECT:\/job\/job-1/,
+      /REDIRECT:\/job\/job-1\?notice=listing-saved/,
     );
 
     expect(mockSaveDiscoveredListing).toHaveBeenCalledWith({
@@ -379,7 +381,7 @@ describe("markJobAppliedAction", () => {
 
     const { markJobAppliedAction } = await import("./jobs");
     await expect(markJobAppliedAction("job-1")).rejects.toThrow(
-      /REDIRECT:\/job\/job-1/,
+      /REDIRECT:\/job\/job-1\?notice=applied/,
     );
     expect(mockMarkJobApplied).toHaveBeenCalledWith({ jobId: "job-1" });
   });
@@ -432,7 +434,20 @@ describe("runResumeJobFitAction", () => {
     const { runResumeJobFitAction } = await import("./jobs");
     await expect(
       runResumeJobFitAction("job-1", "resume-1"),
-    ).rejects.toThrow(/REDIRECT:\/job\/job-1\?resume=resume-1/);
+    ).rejects.toThrow(
+      /REDIRECT:\/job\/job-1\?resume=resume-1&notice=fit-failed/,
+    );
+  });
+
+  it("reports a completed fit check", async () => {
+    mockRunResumeJobFit.mockResolvedValueOnce("fit-1");
+
+    const { runResumeJobFitAction } = await import("./jobs");
+    await expect(
+      runResumeJobFitAction("job-1", "resume-1"),
+    ).rejects.toThrow(
+      /REDIRECT:\/job\/job-1\?resume=resume-1&notice=fit-complete/,
+    );
   });
 
   it("does not hide unexpected persistence failures", async () => {

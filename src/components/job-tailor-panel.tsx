@@ -70,12 +70,14 @@ export function JobTailorPanel({ jobId, resumes }: Props) {
     setError(null);
     startCreating(async () => {
       try {
-        const resumeId = await createTailoredResumeCopyAction(
+        await createTailoredResumeCopyAction(
           jobId,
           selectedResumeId,
           acceptedChanges,
         );
-        router.push(`/resume/${resumeId}`);
+        router.push(
+          `/job/${jobId}?resume=${encodeURIComponent(selectedResumeId)}&notice=tailored-created`,
+        );
       } catch (cause) {
         setError(
           cause instanceof Error ? cause.message : "Unable to create resume copy",

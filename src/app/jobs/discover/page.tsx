@@ -11,6 +11,7 @@ import {
   updateJobSearchProfileAction,
 } from "@/app/actions/jobs";
 import { DeleteJobSearchProfileButton } from "@/components/delete-job-search-profile-button";
+import { ActionNotice } from "@/components/action-notice";
 import { DiscoveredListingActions } from "@/components/discovered-listing-actions";
 import { JobSearchProfileSelector } from "@/components/job-search-profile-selector";
 import { JobSearchProfileCreateForm } from "@/components/job-search-profile-create-form";
@@ -40,6 +41,8 @@ export default async function JobDiscoverPage({
     status?: string;
     sort?: string;
     page?: string;
+    notice?: string;
+    count?: string;
   }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -51,6 +54,8 @@ export default async function JobDiscoverPage({
     status: requestedStatus,
     sort: requestedSort,
     page: requestedPage,
+    notice,
+    count,
   } = await searchParams;
   const selectedProfileId = parseSelectedProfileCookie(
     (await cookies()).get(SELECTED_JOB_PROFILE_COOKIE)?.value,
@@ -113,6 +118,7 @@ export default async function JobDiscoverPage({
             </Link>
           </div>
         </header>
+        <ActionNotice code={notice} count={count} />
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[360px_1fr]">
           <aside className="space-y-6">

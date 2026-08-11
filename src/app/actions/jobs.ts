@@ -171,6 +171,14 @@ function parseSearchProfileForm(formData: FormData) {
   return JobSearchProfileInputSchema.parse(searchProfileFormValue(formData));
 }
 
+function discoveryPath(
+  profileId: string,
+  values: Record<string, string> = {},
+): string {
+  const params = new URLSearchParams({ profile: profileId, ...values });
+  return `/jobs/discover?${params.toString()}`;
+}
+
 export async function createJobSearchProfileAction(
   _previousState: JobDiscoveryFormState,
   formData: FormData,
@@ -199,7 +207,7 @@ export async function createJobSearchProfileAction(
     };
   }
   await persistSelectedProfile(userId, profileId);
-  redirect(`/jobs/discover?profile=${profileId}`);
+  redirect(discoveryPath(profileId, { notice: "profile-created" }));
 }
 
 export async function updateJobSearchProfileAction(
@@ -215,7 +223,7 @@ export async function updateJobSearchProfileAction(
     profileId,
     parseSearchProfileForm(formData),
   );
-  redirect(`/jobs/discover?profile=${profileId}`);
+  redirect(discoveryPath(profileId, { notice: "profile-updated" }));
 }
 
 export async function deleteJobSearchProfileAction(
@@ -232,7 +240,7 @@ export async function deleteJobSearchProfileAction(
   ) {
     cookieStore.delete(SELECTED_JOB_PROFILE_COOKIE);
   }
-  redirect("/jobs/discover");
+  redirect("/jobs/discover?notice=profile-deleted");
 }
 
 export async function selectJobSearchProfileAction(
@@ -294,7 +302,7 @@ export async function createJobSourceAction(
       values,
     };
   }
-  redirect(`/jobs/discover?profile=${parsed.data.profileId}`);
+  redirect(discoveryPath(parsed.data.profileId, { notice: "source-added" }));
 }
 
 export async function setJobSourceEnabledAction(
@@ -303,13 +311,17 @@ export async function setJobSourceEnabledAction(
 ): Promise<void> {
   const userId = await requireSessionUserId();
   const profileId = await setJobSourceEnabledForUser(userId, sourceId, enabled);
-  redirect(`/jobs/discover?profile=${profileId}`);
+  redirect(
+    discoveryPath(profileId, {
+      notice: enabled ? "source-enabled" : "source-paused",
+    }),
+  );
 }
 
 export async function deleteJobSourceAction(sourceId: string): Promise<void> {
   const userId = await requireSessionUserId();
   const profileId = await deleteJobSourceForUser(userId, sourceId);
-  redirect(`/jobs/discover?profile=${profileId}`);
+  redirect(discoveryPath(profileId, { notice: "source-deleted" }));
 }
 
 export type UpdateJobSourceActionResult =
@@ -349,8 +361,14 @@ export async function runJobDiscoveryAction(formData: FormData): Promise<void> {
   if (typeof profileId !== "string" || !profileId) {
     throw new Error("Profile is required.");
   }
-  await runJobDiscovery({ profileId, userId });
-  redirect(`/jobs/discover?profile=${profileId}`);
+  const result = await runJobDiscovery({ profileId, userId });
+  redirect(
+    discoveryPath(profileId, {
+      notice:
+        result.errors.length > 0 ? "discovery-partial" : "discovery-complete",
+      count: String(result.discovered),
+    }),
+  );
 }
 
 export async function saveDiscoveredListingAction(
@@ -358,7 +376,7 @@ export async function saveDiscoveredListingAction(
 ): Promise<void> {
   const userId = await requireSessionUserId();
   const jobId = await saveDiscoveredListingForUser({ userId, listingId });
-  redirect(`/job/${jobId}`);
+  redirect(`/job/${jobId}?notice=listing-saved`);
 }
 
 export async function rejectDiscoveredListingAction(
@@ -370,7 +388,7 @@ export async function rejectDiscoveredListingAction(
     listingId,
     status: "rejected",
   });
-  redirect(`/jobs/discover?profile=${profileId}`);
+  redirect(discoveryPath(profileId, { notice: "listing-rejected" }));
 }
 
 export async function restoreDiscoveredListingAction(
@@ -382,13 +400,19 @@ export async function restoreDiscoveredListingAction(
     listingId,
     status: "discovered",
   });
-  redirect(`/jobs/discover?profile=${profileId}&status=rejected`);
+  redirect(
+    discoveryPath(profileId, {
+      status: "rejected",
+      notice: "listing-restored",
+    }),
+  );
 }
 
 export async function runResumeJobFitAction(
   jobId: string,
   resumeId: string,
 ): Promise<void> {
+  let failed = false;
   try {
     await runResumeJobFit({ jobId, resumeId });
   } catch (error) {
@@ -399,8 +423,13 @@ export async function runResumeJobFitAction(
       throw error;
     }
     // The service persists a safe failed result for the selected resume.
+    failed = true;
   }
-  redirect(`/job/${jobId}?resume=${resumeId}`);
+  const params = new URLSearchParams({
+    resume: resumeId,
+    notice: failed ? "fit-failed" : "fit-complete",
+  });
+  redirect(`/job/${jobId}?${params.toString()}`);
 }
 
 export async function createTailoredResumeCopyAction(
@@ -413,5 +442,5 @@ export async function createTailoredResumeCopyAction(
 
 export async function markJobAppliedAction(jobId: string): Promise<void> {
   await markJobApplied({ jobId });
-  redirect(`/job/${jobId}`);
+  redirect(`/job/${jobId}?notice=applied`);
 }

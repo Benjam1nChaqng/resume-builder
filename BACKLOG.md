@@ -101,7 +101,7 @@ Priority meanings:
 - [x] Add pending states that prevent duplicate profile, source, discovery, fit, and tailor submissions.
 - [ ] Add useful empty states for no profile, no source, no listing, no resume, and no fit result.
 - [ ] Add field-level validation messages instead of uncaught server-action errors.
-- [ ] Add success feedback after discovery, save, reject, fit, tailor, and download actions.
+- [x] Add success feedback after discovery, save, reject, fit, tailor, and download actions.
 - [ ] Make profile/source management usable on mobile and desktop.
 - [ ] Verify import resume to discover job to fit check to tailored copy to PDF in a real browser.
 - [x] Run `pnpm typecheck`, `pnpm lint`, `pnpm test:run`, and `pnpm build` cleanly.

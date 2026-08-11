@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-11: Added whitelisted success/warning notices across discovery, listing review, fit, tailoring, application, and PDF download actions.
 - 2026-08-11: Versioned fit analysis to v2 with separate hard/preferred gaps, general concerns, and unsupported claims that tailoring must avoid.
 - 2026-08-11: Persisted each authenticated user's selected search profile in an owned, HttpOnly preference cookie with URL override support.
 - 2026-08-11: Added fixture-backed ATS/HTML parser tests and blocked non-HTTP links exposed by malformed career-page markup.

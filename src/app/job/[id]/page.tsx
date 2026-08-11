@@ -13,6 +13,8 @@ import {
   runResumeJobFitAction,
 } from "@/app/actions/jobs";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
+import { ActionNotice } from "@/components/action-notice";
+import { ResumePdfDownloadLink } from "@/components/resume-pdf-download-link";
 
 type RouteParams = { id: string };
 
@@ -29,10 +31,10 @@ export default async function JobPage({
   searchParams,
 }: {
   params: Promise<RouteParams>;
-  searchParams: Promise<{ resume?: string }>;
+  searchParams: Promise<{ resume?: string; notice?: string }>;
 }) {
   const { id } = await params;
-  const { resume: requestedResumeId } = await searchParams;
+  const { resume: requestedResumeId, notice } = await searchParams;
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     redirect("/sign-in");
@@ -121,6 +123,7 @@ export default async function JobPage({
             Source: {jd.sourceUrl}
           </a>
         </header>
+        <ActionNotice code={notice} />
 
         <section className="mt-8">
           <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
@@ -221,12 +224,10 @@ export default async function JobPage({
               <Link href={`/resume/${tailoredResumeId}`} className="font-medium underline underline-offset-4">
                 Open tailored resume
               </Link>
-              <Link
-                href={`/resume/${tailoredResumeId}/pdf`}
+              <ResumePdfDownloadLink
+                resumeId={tailoredResumeId}
                 className="ml-4 underline underline-offset-4"
-              >
-                Download PDF
-              </Link>
+              />
             </div>
           )}
 

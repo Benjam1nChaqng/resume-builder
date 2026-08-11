@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Download, Eye, Plus, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, Plus, X } from "lucide-react";
 import {
   addBulletAction,
   addEducationAction,
@@ -30,6 +30,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { EditableDate } from "@/components/editable-date";
 import { EditableText } from "@/components/editable-text";
+import { ResumePdfDownloadLink } from "@/components/resume-pdf-download-link";
 import type { ContactLink } from "@/lib/ai/resume-importer/schema";
 import { cn } from "@/lib/utils";
 
@@ -170,13 +171,10 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
               <Eye className="size-4" />
               Preview
             </Link>
-            <Link
-              href={`/resume/${resume.id}/pdf`}
+            <ResumePdfDownloadLink
+              resumeId={resume.id}
               className={buttonVariants({ variant: "outline", size: "sm" })}
-            >
-              <Download className="size-4" />
-              Download PDF
-            </Link>
+            />
             <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "sm" })}>
               ← Dashboard
             </Link>
