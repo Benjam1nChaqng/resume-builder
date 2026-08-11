@@ -85,6 +85,15 @@ export type ResumeJobFitModelMetadata = {
   checkedAt: string;
 };
 
+export type DiscoverySourceResult = {
+  sourceId: string;
+  label: string;
+  status: "completed" | "failed";
+  inserted: number;
+  durationMs: number;
+  error?: string;
+};
+
 export const jobSearchProfile = pgTable(
   "job_search_profile",
   {
@@ -149,6 +158,11 @@ export const jobDiscoveryRun = pgTable(
     startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
     errorSummary: text("error_summary"),
+    insertedCount: integer("inserted_count").default(0).notNull(),
+    sourceResults: jsonb("source_results")
+      .$type<DiscoverySourceResult[]>()
+      .default(sql`'[]'::jsonb`)
+      .notNull(),
   },
   (table) => [index("job_discovery_run_profile_id_idx").on(table.profileId)],
 );

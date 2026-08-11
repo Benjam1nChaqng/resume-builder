@@ -67,7 +67,21 @@ describe("runJobDiscovery", () => {
     const result = await runJobDiscovery({ profileId: "profile-1", userId: "user-1" });
 
     expect(result).toEqual({ discovered: 0, errors: [] });
-    expect(mockCompleteRun).toHaveBeenCalledWith("run-1", "completed", undefined);
+    expect(mockCompleteRun).toHaveBeenCalledWith(
+      "run-1",
+      "completed",
+      undefined,
+      0,
+      [
+        {
+          sourceId: "source-1",
+          label: "Acme",
+          status: "completed",
+          inserted: 0,
+          durationMs: expect.any(Number),
+        },
+      ],
+    );
   });
 
   it("records a failed run when every configured source fails", async () => {
@@ -85,6 +99,59 @@ describe("runJobDiscovery", () => {
       "run-2",
       "failed",
       "Unsafe: Private URL blocked",
+      0,
+      [
+        {
+          sourceId: "source-1",
+          label: "Unsafe",
+          status: "failed",
+          inserted: 0,
+          durationMs: expect.any(Number),
+          error: "Unsafe: Private URL blocked",
+        },
+      ],
+    );
+  });
+
+  it("records partial completion with stable per-source result order", async () => {
+    mockGetSources.mockResolvedValueOnce([
+      { id: "source-1", label: "Acme", url: "https://acme.test/careers" },
+      { id: "source-2", label: "Broken", url: "https://broken.test/jobs" },
+    ]);
+    mockCreateRun.mockResolvedValueOnce("run-3");
+    mockDiscoverListings
+      .mockResolvedValueOnce([
+        {
+          canonicalUrl: "https://acme.test/jobs/1",
+          title: "Warehouse Associate",
+          company: "Acme",
+          location: null,
+        },
+      ])
+      .mockRejectedValueOnce(new Error("HTTP 503"));
+    mockUpsertListings.mockResolvedValueOnce(1);
+
+    const { runJobDiscovery } = await import("./run-discovery");
+    const result = await runJobDiscovery({ profileId: "profile-1", userId: "user-1" });
+
+    expect(result).toEqual({ discovered: 1, errors: ["Broken: HTTP 503"] });
+    expect(mockCompleteRun).toHaveBeenCalledWith(
+      "run-3",
+      "partial",
+      "Broken: HTTP 503",
+      1,
+      [
+        expect.objectContaining({
+          sourceId: "source-1",
+          status: "completed",
+          inserted: 1,
+        }),
+        expect.objectContaining({
+          sourceId: "source-2",
+          status: "failed",
+          error: "Broken: HTTP 503",
+        }),
+      ],
     );
   });
 });

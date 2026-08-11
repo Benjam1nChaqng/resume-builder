@@ -24,6 +24,7 @@ export async function runJobDiscovery({
   ]);
   const runId = await createDiscoveryRun(profileId);
   const outcomes = await mapWithConcurrency(sources, SOURCE_CONCURRENCY, async (source) => {
+    const startedAt = Date.now();
     try {
       const listings = filterAndRankJobListings(
         await discoverListingsFromSource(source.url),
@@ -34,10 +35,19 @@ export async function runJobDiscovery({
         sourceId: source.id,
         listings,
       });
-      return { discovered, error: null };
+      return {
+        sourceId: source.id,
+        label: source.label,
+        discovered,
+        durationMs: Date.now() - startedAt,
+        error: null,
+      };
     } catch (err) {
       return {
+        sourceId: source.id,
+        label: source.label,
         discovered: 0,
+        durationMs: Date.now() - startedAt,
         error: `${source.label}: ${err instanceof Error ? err.message : "unknown error"}`,
       };
     }
@@ -47,10 +57,25 @@ export async function runJobDiscovery({
     .map((outcome) => outcome.error)
     .filter((error): error is string => Boolean(error));
 
+  const status =
+    errors.length === 0
+      ? "completed"
+      : errors.length === sources.length && sources.length > 0
+        ? "failed"
+        : "partial";
   await completeDiscoveryRun(
     runId,
-    errors.length === sources.length && sources.length > 0 ? "failed" : "completed",
+    status,
     errors.length > 0 ? errors.join("; ") : undefined,
+    discovered,
+    outcomes.map((outcome) => ({
+      sourceId: outcome.sourceId,
+      label: outcome.label,
+      status: outcome.error ? "failed" : "completed",
+      inserted: outcome.discovered,
+      durationMs: outcome.durationMs,
+      ...(outcome.error ? { error: outcome.error } : {}),
+    })),
   );
   return { discovered, errors };
 }

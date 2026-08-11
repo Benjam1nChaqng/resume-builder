@@ -189,6 +189,9 @@ export default async function JobDiscoverPage({
                     </div>
                   </CardHeader>
                   <CardContent>
+                    {activeProfile.runs[0] && (
+                      <DiscoveryRunSummary run={activeProfile.runs[0]} />
+                    )}
                     <details className="border-y border-neutral-200 py-3 dark:border-neutral-800">
                       <summary className="cursor-pointer text-sm font-medium">Edit search criteria</summary>
                       <form action={updateJobSearchProfileAction} className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -335,6 +338,74 @@ function Select({
       >
         {children}
       </select>
+    </div>
+  );
+}
+
+function DiscoveryRunSummary({
+  run,
+}: {
+  run: {
+    status: string;
+    startedAt: Date;
+    completedAt: Date | null;
+    insertedCount: number;
+    errorSummary: string | null;
+    sourceResults: Array<{
+      sourceId: string;
+      label: string;
+      status: "completed" | "failed";
+      inserted: number;
+      durationMs: number;
+      error?: string;
+    }>;
+  };
+}) {
+  const durationMs = run.completedAt
+    ? run.completedAt.getTime() - run.startedAt.getTime()
+    : null;
+  return (
+    <div className="mb-4 border-y border-neutral-200 py-3 text-sm dark:border-neutral-800">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="font-medium capitalize">{run.status}</span>
+        <span className="text-neutral-500">
+          {run.insertedCount} new listing{run.insertedCount === 1 ? "" : "s"}
+        </span>
+        {durationMs !== null && (
+          <span className="text-neutral-500">
+            {(durationMs / 1_000).toFixed(1)}s
+          </span>
+        )}
+        <span className="text-xs text-neutral-400">
+          {run.startedAt.toLocaleString()}
+        </span>
+      </div>
+      {run.sourceResults.length > 0 && (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-xs text-neutral-500">
+            Source results
+          </summary>
+          <ul className="mt-2 space-y-1 text-xs text-neutral-500">
+            {run.sourceResults.map((source) => (
+              <li key={source.sourceId}>
+                <span className="font-medium text-neutral-700 dark:text-neutral-300">
+                  {source.label}
+                </span>
+                {": "}
+                {source.status === "completed"
+                  ? source.inserted + " added"
+                  : (source.error ?? "Failed")}
+                {" (" + (source.durationMs / 1_000).toFixed(1) + "s)"}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {run.errorSummary && run.sourceResults.length === 0 && (
+        <p className="mt-2 text-xs text-red-700 dark:text-red-300">
+          {run.errorSummary}
+        </p>
+      )}
     </div>
   );
 }

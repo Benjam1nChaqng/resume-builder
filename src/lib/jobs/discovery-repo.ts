@@ -6,6 +6,7 @@ import {
   jobListing,
   jobSearchProfile,
   jobSource,
+  type DiscoverySourceResult,
 } from "@/lib/db/jobs-schema";
 import type {
   DiscoveredListing,
@@ -116,6 +117,10 @@ export async function listDiscoveryData(userId: string) {
     orderBy: (cols, { desc }) => [desc(cols.updatedAt)],
     with: {
       sources: true,
+      runs: {
+        orderBy: (cols, { desc }) => [desc(cols.startedAt)],
+        limit: 1,
+      },
       listings: {
         orderBy: (cols, { desc }) => [
           desc(cols.matchScore),
@@ -169,12 +174,20 @@ export async function createDiscoveryRun(profileId: string): Promise<string> {
 
 export async function completeDiscoveryRun(
   runId: string,
-  status: "completed" | "failed",
+  status: "completed" | "partial" | "failed",
   errorSummary?: string,
+  insertedCount = 0,
+  sourceResults: DiscoverySourceResult[] = [],
 ): Promise<void> {
   await db
     .update(jobDiscoveryRun)
-    .set({ status, completedAt: new Date(), errorSummary: errorSummary ?? null })
+    .set({
+      status,
+      completedAt: new Date(),
+      errorSummary: errorSummary ?? null,
+      insertedCount,
+      sourceResults,
+    })
     .where(eq(jobDiscoveryRun.id, runId));
 }
 
