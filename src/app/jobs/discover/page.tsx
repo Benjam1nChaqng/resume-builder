@@ -425,6 +425,7 @@ function DiscoveryRunSummary({
       label: string;
       status: "completed" | "failed";
       inserted: number;
+      attempts?: number;
       durationMs: number;
       error?: string;
     }>;
@@ -465,6 +466,9 @@ function DiscoveryRunSummary({
                   ? source.inserted + " added"
                   : (source.error ?? "Failed")}
                 {" (" + (source.durationMs / 1_000).toFixed(1) + "s)"}
+                {source.attempts && source.attempts > 1
+                  ? `, ${source.attempts} attempts`
+                  : ""}
               </li>
             ))}
           </ul>

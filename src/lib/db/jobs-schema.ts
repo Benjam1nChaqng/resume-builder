@@ -100,6 +100,7 @@ export type DiscoverySourceResult = {
   label: string;
   status: "completed" | "failed";
   inserted: number;
+  attempts?: number;
   durationMs: number;
   error?: string;
 };

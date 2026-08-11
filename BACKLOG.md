@@ -52,7 +52,7 @@ Priority meanings:
 - [x] Run independent source fetches with bounded concurrency.
 - [x] Record per-source results and partial failures for each discovery run.
 - [x] Show last-run status, duration, inserted count, and error summary.
-- [ ] Add retry behavior for transient source failures without duplicating listings.
+- [x] Add retry behavior for transient source failures without duplicating listings.
 - [ ] Add fixture tests for each supported parser and malformed HTML.
 - [x] Add tests for redirects, timeouts, oversized responses, and blocked hosts.
 

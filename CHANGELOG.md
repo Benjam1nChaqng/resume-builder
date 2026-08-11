@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-11: Added bounded transient discovery retries with exponential backoff, idempotent writes, attempt tracking, and run-summary visibility.
 - 2026-08-11: Added persisted resume-specific fit failures, safe retry UI, successful/failed fit invariants, and migration `0009`.
 - 2026-08-11: Added owned job-source editing with URL normalization, SSRF validation, duplicate handling, and inline dialog feedback.
 - 2026-08-11: Added profile-scoped employer/title/location fingerprint deduplication with migration `0008`, while retaining canonical source links on saved jobs.

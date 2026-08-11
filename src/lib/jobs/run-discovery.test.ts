@@ -78,6 +78,7 @@ describe("runJobDiscovery", () => {
           label: "Acme",
           status: "completed",
           inserted: 0,
+          attempts: 1,
           durationMs: expect.any(Number),
         },
       ],
@@ -106,6 +107,7 @@ describe("runJobDiscovery", () => {
           label: "Unsafe",
           status: "failed",
           inserted: 0,
+          attempts: 1,
           durationMs: expect.any(Number),
           error: "Unsafe: Private URL blocked",
         },
@@ -128,11 +130,14 @@ describe("runJobDiscovery", () => {
           location: null,
         },
       ])
-      .mockRejectedValueOnce(new Error("HTTP 503"));
+      .mockRejectedValue(new Error("HTTP 503"));
     mockUpsertListings.mockResolvedValueOnce(1);
 
     const { runJobDiscovery } = await import("./run-discovery");
-    const result = await runJobDiscovery({ profileId: "profile-1", userId: "user-1" });
+    const result = await runJobDiscovery(
+      { profileId: "profile-1", userId: "user-1" },
+      { retry: { sleep: async () => undefined } },
+    );
 
     expect(result).toEqual({ discovered: 1, errors: ["Broken: HTTP 503"] });
     expect(mockCompleteRun).toHaveBeenCalledWith(
@@ -145,11 +150,56 @@ describe("runJobDiscovery", () => {
           sourceId: "source-1",
           status: "completed",
           inserted: 1,
+          attempts: 1,
         }),
         expect.objectContaining({
           sourceId: "source-2",
           status: "failed",
+          attempts: 3,
           error: "Broken: HTTP 503",
+        }),
+      ],
+    );
+    expect(mockDiscoverListings).toHaveBeenCalledTimes(4);
+  });
+
+  it("upserts only once after a transient source recovers", async () => {
+    mockGetSources.mockResolvedValueOnce([
+      { id: "source-1", label: "Acme", url: "https://acme.test/careers" },
+    ]);
+    mockCreateRun.mockResolvedValueOnce("run-4");
+    mockDiscoverListings
+      .mockRejectedValueOnce(new Error("HTTP 429"))
+      .mockResolvedValueOnce([
+        {
+          canonicalUrl: "https://acme.test/jobs/1",
+          title: "Warehouse Associate",
+          company: "Acme",
+          location: null,
+        },
+      ]);
+    mockUpsertListings.mockResolvedValueOnce(1);
+
+    const { runJobDiscovery } = await import("./run-discovery");
+    const result = await runJobDiscovery(
+      { profileId: "profile-1", userId: "user-1" },
+      { retry: { sleep: async () => undefined } },
+    );
+
+    expect(result).toEqual({ discovered: 1, errors: [] });
+    expect(mockDiscoverListings).toHaveBeenCalledTimes(2);
+    expect(mockUpsertListings).toHaveBeenCalledTimes(1);
+    expect(mockCompleteRun).toHaveBeenCalledWith(
+      "run-4",
+      "completed",
+      undefined,
+      1,
+      [
+        expect.objectContaining({
+          sourceId: "source-1",
+          status: "completed",
+          inserted: 1,
+          attempts: 2,
         }),
       ],
     );
