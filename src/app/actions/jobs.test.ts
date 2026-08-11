@@ -38,6 +38,10 @@ vi.mock("@/lib/jobs/discovery", () => ({
 vi.mock("@/lib/jobs/discovery-repo", () => ({
   createJobSearchProfile: vi.fn(),
   createJobSourceForUser: vi.fn(),
+  deleteJobSearchProfileForUser: vi.fn(),
+  deleteJobSourceForUser: vi.fn(),
+  setJobSourceEnabledForUser: vi.fn(),
+  updateJobSearchProfileForUser: vi.fn(),
   updateListingStatusForUser: vi.fn(),
 }));
 

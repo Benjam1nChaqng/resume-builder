@@ -11,6 +11,10 @@ import {
 import {
   createJobSearchProfile,
   createJobSourceForUser,
+  deleteJobSearchProfileForUser,
+  deleteJobSourceForUser,
+  setJobSourceEnabledForUser,
+  updateJobSearchProfileForUser,
   updateListingStatusForUser,
 } from "@/lib/jobs/discovery-repo";
 import { runResumeJobFit } from "@/lib/jobs/fit";
@@ -62,11 +66,8 @@ function splitList(value: FormDataEntryValue | null): string[] {
     .filter(Boolean);
 }
 
-export async function createJobSearchProfileAction(
-  formData: FormData,
-): Promise<void> {
-  const userId = await requireSessionUserId();
-  const input = JobSearchProfileInputSchema.parse({
+function parseSearchProfileForm(formData: FormData) {
+  return JobSearchProfileInputSchema.parse({
     candidateName: formData.get("candidateName"),
     targetRoles: splitList(formData.get("targetRoles")),
     locationPreference:
@@ -80,18 +81,53 @@ export async function createJobSearchProfileAction(
         : null,
     keywords: splitList(formData.get("keywords")),
     exclusions: splitList(formData.get("exclusions")),
-    basicJobFilters: {
-      partTime: formData.get("partTime") === "on",
-      hourly: formData.get("hourly") === "on",
-      entryLevel: formData.get("entryLevel") === "on",
-      retail: formData.get("retail") === "on",
-      admin: formData.get("admin") === "on",
-      service: formData.get("service") === "on",
-      warehouse: formData.get("warehouse") === "on",
-      internship: formData.get("internship") === "on",
-    },
+    basicJobFilters: Object.fromEntries(
+      [
+        "partTime",
+        "hourly",
+        "entryLevel",
+        "retail",
+        "admin",
+        "service",
+        "warehouse",
+        "internship",
+      ].map((filter) => [filter, formData.get(filter) === "on"]),
+    ),
   });
-  await createJobSearchProfile(userId, input);
+}
+
+export async function createJobSearchProfileAction(
+  formData: FormData,
+): Promise<void> {
+  const userId = await requireSessionUserId();
+  const profileId = await createJobSearchProfile(
+    userId,
+    parseSearchProfileForm(formData),
+  );
+  redirect(`/jobs/discover?profile=${profileId}`);
+}
+
+export async function updateJobSearchProfileAction(
+  formData: FormData,
+): Promise<void> {
+  const userId = await requireSessionUserId();
+  const profileId = formData.get("profileId");
+  if (typeof profileId !== "string" || !profileId) {
+    throw new Error("Profile is required.");
+  }
+  await updateJobSearchProfileForUser(
+    userId,
+    profileId,
+    parseSearchProfileForm(formData),
+  );
+  redirect(`/jobs/discover?profile=${profileId}`);
+}
+
+export async function deleteJobSearchProfileAction(
+  profileId: string,
+): Promise<void> {
+  const userId = await requireSessionUserId();
+  await deleteJobSearchProfileForUser(userId, profileId);
   redirect("/jobs/discover");
 }
 
@@ -103,7 +139,22 @@ export async function createJobSourceAction(formData: FormData): Promise<void> {
     url: formData.get("url"),
   });
   await createJobSourceForUser(userId, input);
-  redirect("/jobs/discover");
+  redirect(`/jobs/discover?profile=${input.profileId}`);
+}
+
+export async function setJobSourceEnabledAction(
+  sourceId: string,
+  enabled: boolean,
+): Promise<void> {
+  const userId = await requireSessionUserId();
+  const profileId = await setJobSourceEnabledForUser(userId, sourceId, enabled);
+  redirect(`/jobs/discover?profile=${profileId}`);
+}
+
+export async function deleteJobSourceAction(sourceId: string): Promise<void> {
+  const userId = await requireSessionUserId();
+  const profileId = await deleteJobSourceForUser(userId, sourceId);
+  redirect(`/jobs/discover?profile=${profileId}`);
 }
 
 export async function runJobDiscoveryAction(formData: FormData): Promise<void> {
@@ -113,7 +164,7 @@ export async function runJobDiscoveryAction(formData: FormData): Promise<void> {
     throw new Error("Profile is required.");
   }
   await runJobDiscovery({ profileId, userId });
-  redirect("/jobs/discover");
+  redirect(`/jobs/discover?profile=${profileId}`);
 }
 
 export async function saveDiscoveredListingAction(
@@ -128,8 +179,12 @@ export async function rejectDiscoveredListingAction(
   listingId: string,
 ): Promise<void> {
   const userId = await requireSessionUserId();
-  await updateListingStatusForUser({ userId, listingId, status: "rejected" });
-  redirect("/jobs/discover");
+  const profileId = await updateListingStatusForUser({
+    userId,
+    listingId,
+    status: "rejected",
+  });
+  redirect(`/jobs/discover?profile=${profileId}`);
 }
 
 export async function runResumeJobFitAction(

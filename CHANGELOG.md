@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-11: Added explicit friend/self search-profile selection, owned criteria updates and deletion, source pause/delete controls, duplicate-source detection, and pending-safe discovery forms.
 - 2026-08-11: Added protected Greenhouse and global/EU Lever discovery adapters with structured API parsing, filter preservation, malformed-response handling, and HTML fallback.
 - 2026-08-11: Added a prioritized product backlog and reusable Codex operator workflow for sustained, verified resume-builder development.
 - 2026-08-11: Restored Drizzle snapshot metadata for the job discovery migration and verified the checked-in schema produces no additional migration.

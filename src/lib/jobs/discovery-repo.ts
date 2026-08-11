@@ -23,6 +23,31 @@ export async function createJobSearchProfile(
   return id;
 }
 
+export async function updateJobSearchProfileForUser(
+  userId: string,
+  profileId: string,
+  input: JobSearchProfileInput,
+): Promise<void> {
+  await requireProfileOwner(profileId, userId);
+  await db
+    .update(jobSearchProfile)
+    .set({ ...input, updatedAt: new Date() })
+    .where(eq(jobSearchProfile.id, profileId));
+}
+
+export async function deleteJobSearchProfileForUser(
+  userId: string,
+  profileId: string,
+): Promise<void> {
+  const deleted = await db
+    .delete(jobSearchProfile)
+    .where(
+      and(eq(jobSearchProfile.id, profileId), eq(jobSearchProfile.userId, userId)),
+    )
+    .returning({ id: jobSearchProfile.id });
+  if (!deleted[0]) throw new Error("Job search profile not found.");
+}
+
 export async function createJobSourceForUser(
   userId: string,
   input: JobSourceInput,
@@ -30,11 +55,46 @@ export async function createJobSourceForUser(
   await requireProfileOwner(input.profileId, userId);
   await assertPublicHttpUrl(input.url);
   const id = randomUUID();
-  await db
+  const inserted = await db
     .insert(jobSource)
     .values({ id, profileId: input.profileId, label: input.label, url: input.url })
-    .onConflictDoNothing();
+    .onConflictDoNothing()
+    .returning({ id: jobSource.id });
+  if (!inserted[0]) throw new Error("This source is already added to the profile.");
   return id;
+}
+
+async function requireSourceOwner(
+  sourceId: string,
+  userId: string,
+): Promise<{ profileId: string }> {
+  const rows = await db
+    .select({ profileId: jobSource.profileId })
+    .from(jobSource)
+    .innerJoin(jobSearchProfile, eq(jobSource.profileId, jobSearchProfile.id))
+    .where(and(eq(jobSource.id, sourceId), eq(jobSearchProfile.userId, userId)))
+    .limit(1);
+  if (!rows[0]) throw new Error("Job source not found.");
+  return rows[0];
+}
+
+export async function setJobSourceEnabledForUser(
+  userId: string,
+  sourceId: string,
+  enabled: boolean,
+): Promise<string> {
+  const source = await requireSourceOwner(sourceId, userId);
+  await db.update(jobSource).set({ enabled }).where(eq(jobSource.id, sourceId));
+  return source.profileId;
+}
+
+export async function deleteJobSourceForUser(
+  userId: string,
+  sourceId: string,
+): Promise<string> {
+  const source = await requireSourceOwner(sourceId, userId);
+  await db.delete(jobSource).where(eq(jobSource.id, sourceId));
+  return source.profileId;
 }
 
 export async function requireProfileOwner(
@@ -128,7 +188,7 @@ export async function updateListingStatusForUser({
   listingId: string;
   status: "saved" | "rejected" | "tailored" | "applied";
   jobId?: string;
-}): Promise<void> {
+}): Promise<string> {
   const rows = await db
     .select({ profileId: jobListing.profileId })
     .from(jobListing)
@@ -141,6 +201,7 @@ export async function updateListingStatusForUser({
     .update(jobListing)
     .set({ status, ...(jobId ? { jobId } : {}) })
     .where(eq(jobListing.id, listingId));
+  return rows[0].profileId;
 }
 
 export async function getDiscoveredListingForUser({
