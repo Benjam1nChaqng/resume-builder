@@ -74,9 +74,9 @@ Priority meanings:
 
 - [x] Verify job and resume ownership belong to the same authenticated user in one service boundary.
 - [ ] Persist fit-check failure state and safe retry messaging.
-- [ ] Include requirement-level source evidence and confidence in the fit contract.
+- [x] Include requirement-level source evidence, resume section, and confidence in the fit contract.
 - [ ] Separate hard requirements, preferred requirements, concerns, and unsupported claims.
-- [ ] Add a deterministic non-LLM baseline score for testing and comparison.
+- [x] Add a deterministic non-LLM baseline score for testing and comparison.
 - [x] Show fit results for the selected resume instead of only the latest job-wide result.
 - [x] Let users accept or reject individual proposed bullet changes.
 - [x] Apply only accepted changes to the tailored copy.
@@ -116,7 +116,7 @@ Priority meanings:
 - [ ] Create a small anonymized gold dataset of resumes, jobs, expected evidence, and forbidden claims.
 - [ ] Add Braintrust evals for extraction accuracy, fit ranking, and tailoring faithfulness.
 - [ ] Add hallucination checks that fail any invented employer, metric, credential, or tool.
-- [ ] Compare model scores with the deterministic baseline and flag large disagreement.
+- [x] Compare model scores with the deterministic baseline and flag large disagreement.
 - [ ] Track prompt, schema, rubric, and model versions on every fit and tailoring result.
 - [ ] Add regression cases for sparse resumes, career changes, entry-level candidates, and hourly roles.
 - [ ] Add quality thresholds that block low-confidence auto-tailoring.

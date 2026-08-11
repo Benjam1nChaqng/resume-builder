@@ -1,12 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { analyzeResumeFit } from "@/lib/ai/resume-fit";
+import {
+  analyzeResumeFit,
+  RESUME_FIT_RUBRIC_VERSION,
+} from "@/lib/ai/resume-fit";
 import { MODELS } from "@/lib/ai/models";
 import { db } from "@/lib/db";
 import { job, resumeJobFit } from "@/lib/db/jobs-schema";
 import { requireJobAccess } from "@/lib/jobs/access";
 import { requireResumeAccess } from "@/lib/resumes/access";
 import { loadRenderableResume, resumeToPlainText } from "@/lib/resumes/render";
+import { calculateBaselineFit } from "./baseline-fit";
 
 export async function runResumeJobFit({
   jobId,
@@ -29,6 +33,12 @@ export async function runResumeJobFit({
   if (!jobRow) throw new Error("Job not found.");
   if (!resumeData) throw new Error("Resume not found.");
 
+  const resumeText = resumeToPlainText(resumeData);
+  const baseline = calculateBaselineFit({
+    jobTitle: jobRow.title,
+    requirements: jobRow.requirements,
+    resumeText,
+  });
   const fit = await analyzeResumeFit({
     job: {
       title: jobRow.title,
@@ -37,8 +47,16 @@ export async function runResumeJobFit({
       requirements: jobRow.requirements,
       niceToHaves: jobRow.niceToHaves,
     },
-    resumeText: resumeToPlainText(resumeData),
+    resumeText,
   });
+  const scoreGap = Math.abs(fit.score - baseline.score);
+  const concerns =
+    scoreGap >= 30
+      ? [
+          ...fit.concerns,
+          `Model score differs from the deterministic baseline by ${scoreGap} points; review the evidence before tailoring.`,
+        ]
+      : fit.concerns;
 
   const id = randomUUID();
   await db.insert(resumeJobFit).values({
@@ -49,11 +67,14 @@ export async function runResumeJobFit({
     score: fit.score,
     matchingEvidence: fit.matchingEvidence,
     missingRequirements: fit.missingRequirements,
-    concerns: fit.concerns,
+    concerns,
     recommendations: fit.recommendations,
     modelMetadata: {
       model: MODELS.REVIEWER,
       checkedAt: new Date().toISOString(),
+      rubricVersion: RESUME_FIT_RUBRIC_VERSION,
+      baselineScore: baseline.score,
+      scoreGap,
     },
   });
   return id;

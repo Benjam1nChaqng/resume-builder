@@ -4,12 +4,13 @@ import { MODELS } from "@/lib/ai/models";
 import { ResumeJobFitSchema, type ResumeJobFit } from "./schema";
 
 const TOOL_NAME = "score_resume_fit";
+export const RESUME_FIT_RUBRIC_VERSION = "resume-fit-v1";
 
 const SYSTEM_PROMPT = `You are a rigorous resume-to-job fit reviewer.
 
 Return source-backed resume fit analysis:
 - score is 0-100, where 100 means the resume clearly satisfies the role.
-- matchingEvidence cites specific resume evidence for JD requirements.
+- matchingEvidence cites specific resume evidence for JD requirements, names the resume source section, and assigns high, medium, or low confidence.
 - missingRequirements are requirements not supported by the resume.
 - concerns are risks, ambiguity, or weak signals.
 - recommendations are concrete resume changes that would improve fit without inventing experience.
@@ -64,4 +65,3 @@ export async function analyzeResumeFit({
 
   return ResumeJobFitSchema.parse(toolUse.input);
 }
-

@@ -7,6 +7,11 @@ export const ResumeJobFitSchema = z.object({
       z.object({
         label: z.string().min(1),
         evidence: z.string().min(1),
+        sourceSection: z
+          .enum(["experience", "skills", "education", "projects"])
+          .nullable()
+          .default(null),
+        confidence: z.enum(["high", "medium", "low"]).default("medium"),
       }),
     )
     .default([]),
@@ -16,4 +21,3 @@ export const ResumeJobFitSchema = z.object({
 });
 
 export type ResumeJobFit = z.infer<typeof ResumeJobFitSchema>;
-

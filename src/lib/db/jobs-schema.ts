@@ -78,11 +78,16 @@ export type JobSearchFilters = {
 export type ResumeJobFitFinding = {
   label: string;
   evidence: string;
+  sourceSection?: "experience" | "skills" | "education" | "projects" | null;
+  confidence?: "high" | "medium" | "low";
 };
 
 export type ResumeJobFitModelMetadata = {
   model: string;
   checkedAt: string;
+  rubricVersion?: string;
+  baselineScore?: number;
+  scoreGap?: number;
 };
 
 export type DiscoverySourceResult = {

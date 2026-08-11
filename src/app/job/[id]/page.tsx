@@ -253,8 +253,30 @@ export default async function JobPage({
               <p className="mt-1 text-xs text-neutral-500">
                 {activeResume?.title ?? "Selected resume"} checked {new Date(activeFit.createdAt).toLocaleString()}
               </p>
+              {activeFit.modelMetadata?.baselineScore !== undefined && (
+                <p className="mt-1 text-xs text-neutral-500">
+                  Deterministic baseline: {activeFit.modelMetadata.baselineScore}/100
+                  {activeFit.modelMetadata.rubricVersion
+                    ? " | " + activeFit.modelMetadata.rubricVersion
+                    : ""}
+                </p>
+              )}
               <div className="mt-4 grid gap-5 md:grid-cols-2">
-                <ListBlock title="Matching evidence" items={activeFit.matchingEvidence.map((f) => `${f.label}: ${f.evidence}`)} />
+                <ListBlock
+                  title="Matching evidence"
+                  items={activeFit.matchingEvidence.map(
+                    (finding) =>
+                      finding.label +
+                      ": " +
+                      finding.evidence +
+                      " [" +
+                      (finding.confidence ?? "unrated") +
+                      (finding.sourceSection
+                        ? ", " + finding.sourceSection
+                        : "") +
+                      "]",
+                  )}
+                />
                 <ListBlock title="Missing requirements" items={activeFit.missingRequirements} />
                 <ListBlock title="Concerns" items={activeFit.concerns} />
                 <ListBlock title="Recommendations" items={activeFit.recommendations} />
