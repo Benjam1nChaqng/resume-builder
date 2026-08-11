@@ -211,6 +211,9 @@ export async function upsertDiscoveredListings({
         title: listing.title,
         company: listing.company,
         location: listing.location,
+        employmentType: listing.employmentType ?? null,
+        compensationText: listing.compensationText ?? null,
+        postedAt: listing.postedAt ?? null,
         matchScore: listing.matchScore ?? 0,
       })),
     )

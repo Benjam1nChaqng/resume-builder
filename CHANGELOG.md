@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-11: Added public Ashby board discovery with listed-only jobs, compensation, employment type, posted dates, remote normalization, richer Greenhouse/Lever metadata, and migration `0006`.
 - 2026-08-11: Added profile-scoped listing status filters, rejected-listing restore, structured-job links, and synchronized applied application/listing state.
 - 2026-08-11: Added per-source discovery run results, partial-failure status, inserted totals, duration reporting, profile-page run summaries, and migration `0005`.
 - 2026-08-11: Made tailoring approval-driven with verified bullet IDs, selective copy updates, original-text provenance, linked listing state, and resume-specific fit results.

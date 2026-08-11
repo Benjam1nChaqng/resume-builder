@@ -42,8 +42,10 @@ Priority meanings:
 
 - [x] Parse `JobPosting` JSON-LD before falling back to anchor extraction.
 - [x] Add dedicated adapters for public Greenhouse and global/EU Lever job boards.
-- [ ] Add dedicated adapters for Ashby and Workday search pages.
-- [ ] Extract company, location, employment type, compensation, and posted date when available.
+- [x] Add a dedicated adapter for public Ashby job boards.
+- [ ] Add a stable supported adapter for Workday tenant search pages.
+- [x] Extract location, employment type, compensation, and posted date when available.
+- [ ] Resolve company names from trusted source metadata when ATS feeds omit them.
 - [x] Apply exclusions, remote, and basic-job filters, then rank by target roles, keywords, and location.
 - [ ] Deduplicate by canonical URL and normalized company/title fingerprint.
 - [x] Return the number of rows actually inserted, not the number attempted.

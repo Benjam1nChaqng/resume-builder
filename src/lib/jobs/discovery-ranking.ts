@@ -73,7 +73,15 @@ function scoreListing(
 ): number {
   const title = normalize(listing.title);
   const fullText = normalize(
-    [listing.title, listing.company, listing.location].filter(Boolean).join(" "),
+    [
+      listing.title,
+      listing.company,
+      listing.location,
+      listing.employmentType,
+      listing.compensationText,
+    ]
+      .filter(Boolean)
+      .join(" "),
   );
   const roleScore = Math.max(
     0,
@@ -116,7 +124,15 @@ export function filterAndRankJobListings(
   return listings
     .filter((listing) => {
       const haystack = normalize(
-        [listing.title, listing.company, listing.location].filter(Boolean).join(" "),
+        [
+          listing.title,
+          listing.company,
+          listing.location,
+          listing.employmentType,
+          listing.compensationText,
+        ]
+          .filter(Boolean)
+          .join(" "),
       );
       if (
         profile.exclusions.some((exclusion) =>

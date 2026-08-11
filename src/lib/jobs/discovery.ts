@@ -71,6 +71,9 @@ export type DiscoveredListing = {
   title: string;
   company: string | null;
   location: string | null;
+  employmentType?: string | null;
+  compensationText?: string | null;
+  postedAt?: Date | null;
   matchScore?: number;
 };
 

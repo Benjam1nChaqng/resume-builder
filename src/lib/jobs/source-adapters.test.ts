@@ -63,6 +63,7 @@ describe("job source adapters", () => {
         title: "Customer Support Associate",
         company: null,
         location: "Remote - US",
+        postedAt: null,
       },
     ]);
   });
@@ -88,6 +89,58 @@ describe("job source adapters", () => {
         title: "Operations Coordinator",
         company: null,
         location: "Remote - United States",
+        employmentType: null,
+        postedAt: null,
+      },
+    ]);
+  });
+
+  it("extracts listed Ashby jobs with public compensation metadata", async () => {
+    expect(detectSupportedJobSource("https://jobs.ashbyhq.com/Acme")).toEqual({
+      kind: "ashby",
+      endpoint:
+        "https://api.ashbyhq.com/posting-api/job-board/Acme?includeCompensation=true",
+    });
+    const fetchJson = vi.fn().mockResolvedValue({
+      finalUrl:
+        "https://api.ashbyhq.com/posting-api/job-board/Acme?includeCompensation=true",
+      data: {
+        jobs: [
+          {
+            title: "Customer Experience Associate",
+            location: "United States",
+            isListed: true,
+            isRemote: true,
+            employmentType: "FullTime",
+            publishedAt: "2026-08-01T12:00:00.000Z",
+            jobUrl: "https://jobs.ashbyhq.com/Acme/abc?utm_source=feed",
+            compensation: {
+              scrapeableCompensationSalarySummary: "$50K - $60K",
+            },
+          },
+          {
+            title: "Unlisted Role",
+            location: "New York",
+            isListed: false,
+            jobUrl: "https://jobs.ashbyhq.com/Acme/hidden",
+          },
+        ],
+      },
+    });
+
+    await expect(
+      discoverListingsFromSource("https://jobs.ashbyhq.com/Acme", {
+        fetchJson,
+      }),
+    ).resolves.toEqual([
+      {
+        canonicalUrl: "https://jobs.ashbyhq.com/Acme/abc",
+        title: "Customer Experience Associate",
+        company: null,
+        location: "Remote - United States",
+        employmentType: "FullTime",
+        compensationText: "$50K - $60K",
+        postedAt: new Date("2026-08-01T12:00:00.000Z"),
       },
     ]);
   });

@@ -304,6 +304,12 @@ export default async function JobDiscoverPage({
                               {[
                                 listing.company,
                                 listing.location,
+                                listing.employmentType,
+                                listing.compensationText,
+                                listing.postedAt
+                                  ? "Posted " +
+                                    listing.postedAt.toLocaleDateString()
+                                  : null,
                                 listing.matchScore > 0
                                   ? `${listing.matchScore}% profile match`
                                   : null,

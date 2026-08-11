@@ -14,6 +14,7 @@ const GreenhouseResponseSchema = z.object({
     z.object({
       title: z.string().trim().min(1),
       absolute_url: z.string().url(),
+      updated_at: z.string().trim().optional(),
       location: z
         .object({ name: z.string().trim().nullable().optional() })
         .optional(),
@@ -28,16 +29,45 @@ const LeverResponseSchema = z.array(
     categories: z
       .object({
         location: z.string().trim().nullable().optional(),
+        commitment: z.string().trim().nullable().optional(),
       })
       .passthrough()
       .optional(),
     workplaceType: z.string().trim().nullable().optional(),
+    createdAt: z.number().int().nonnegative().optional(),
   }),
 );
 
+const AshbyResponseSchema = z.object({
+  jobs: z.array(
+    z.object({
+      title: z.string().trim().min(1),
+      location: z.string().trim().nullable().optional(),
+      isListed: z.boolean().optional(),
+      isRemote: z.boolean().optional(),
+      workplaceType: z.string().trim().nullable().optional(),
+      employmentType: z.string().trim().nullable().optional(),
+      publishedAt: z.string().trim().nullable().optional(),
+      jobUrl: z.string().url(),
+      compensation: z
+        .object({
+          compensationTierSummary: z.string().trim().nullable().optional(),
+          scrapeableCompensationSalarySummary: z
+            .string()
+            .trim()
+            .nullable()
+            .optional(),
+        })
+        .nullable()
+        .optional(),
+    }),
+  ),
+});
+
 export type SupportedJobSource =
   | { kind: "greenhouse"; endpoint: string }
-  | { kind: "lever"; endpoint: string };
+  | { kind: "lever"; endpoint: string }
+  | { kind: "ashby"; endpoint: string };
 
 type SourceAdapterDependencies = {
   fetchHtml?: typeof fetchPublicHtml;
@@ -89,6 +119,18 @@ function leverSource(url: URL): SupportedJobSource | null {
   return { kind: "lever", endpoint: endpoint.toString() };
 }
 
+function ashbySource(url: URL): SupportedJobSource | null {
+  if (url.hostname !== "jobs.ashbyhq.com") return null;
+  const boardName = firstPathSegment(url)?.trim();
+  if (!boardName || !ATS_SLUG_PATTERN.test(boardName)) return null;
+
+  return {
+    kind: "ashby",
+    endpoint:
+      `https://api.ashbyhq.com/posting-api/job-board/${boardName}?includeCompensation=true`,
+  };
+}
+
 export function detectSupportedJobSource(rawUrl: string): SupportedJobSource | null {
   let url: URL;
   try {
@@ -97,7 +139,13 @@ export function detectSupportedJobSource(rawUrl: string): SupportedJobSource | n
     return null;
   }
   url.hostname = url.hostname.toLowerCase();
-  return greenhouseSource(url) ?? leverSource(url);
+  return greenhouseSource(url) ?? leverSource(url) ?? ashbySource(url);
+}
+
+function validDate(value: string | number | null | undefined): Date | null {
+  if (value === null || value === undefined) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function parseGreenhouseListings(data: unknown): DiscoveredListing[] {
@@ -111,6 +159,7 @@ function parseGreenhouseListings(data: unknown): DiscoveredListing[] {
     title: listing.title.slice(0, 180),
     company: null,
     location: listing.location?.name || null,
+    postedAt: validDate(listing.updated_at),
   }));
 }
 
@@ -132,7 +181,43 @@ function parseLeverListings(data: unknown): DiscoveredListing[] {
     title: listing.text.slice(0, 180),
     company: null,
     location: leverLocation(listing),
+    employmentType: listing.categories?.commitment || null,
+    postedAt: validDate(listing.createdAt),
   }));
+}
+
+function parseAshbyListings(data: unknown): DiscoveredListing[] {
+  const parsed = AshbyResponseSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error("Ashby returned unexpected job data.");
+  }
+
+  return parsed.data.jobs
+    .filter((listing) => listing.isListed !== false)
+    .slice(0, MAX_ADAPTER_LISTINGS)
+    .map((listing) => {
+      const isRemote =
+        listing.isRemote ||
+        listing.workplaceType?.toLowerCase() === "remote";
+      const location = listing.location || null;
+      const remoteLocation = isRemote
+        ? location && !location.toLowerCase().includes("remote")
+          ? `Remote - ${location}`
+          : "Remote"
+        : location;
+      return {
+        canonicalUrl: canonicalizeJobUrl(listing.jobUrl),
+        title: listing.title.slice(0, 180),
+        company: null,
+        location: remoteLocation,
+        employmentType: listing.employmentType || null,
+        compensationText:
+          listing.compensation?.scrapeableCompensationSalarySummary ||
+          listing.compensation?.compensationTierSummary ||
+          null,
+        postedAt: validDate(listing.publishedAt),
+      };
+    });
 }
 
 export async function discoverListingsFromSource(
@@ -150,7 +235,7 @@ export async function discoverListingsFromSource(
   const { data } = await (dependencies.fetchJson ?? fetchPublicJson)(
     adapter.endpoint,
   );
-  return adapter.kind === "greenhouse"
-    ? parseGreenhouseListings(data)
-    : parseLeverListings(data);
+  if (adapter.kind === "greenhouse") return parseGreenhouseListings(data);
+  if (adapter.kind === "lever") return parseLeverListings(data);
+  return parseAshbyListings(data);
 }
