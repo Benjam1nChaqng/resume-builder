@@ -12,6 +12,9 @@ import { requireResumeAccess } from "@/lib/resumes/access";
 import { loadRenderableResume, resumeToPlainText } from "@/lib/resumes/render";
 import { calculateBaselineFit } from "./baseline-fit";
 
+export const FIT_CHECK_FAILURE_MESSAGE =
+  "Fit check failed. Review the job and resume, then try again.";
+
 export async function runResumeJobFit({
   jobId,
   resumeId,
@@ -39,16 +42,38 @@ export async function runResumeJobFit({
     requirements: jobRow.requirements,
     resumeText,
   });
-  const fit = await analyzeResumeFit({
-    job: {
-      title: jobRow.title,
-      company: jobRow.company,
-      description: jobRow.description,
-      requirements: jobRow.requirements,
-      niceToHaves: jobRow.niceToHaves,
-    },
-    resumeText,
-  });
+  const id = randomUUID();
+  const checkedAt = new Date().toISOString();
+  let fit: Awaited<ReturnType<typeof analyzeResumeFit>>;
+  try {
+    fit = await analyzeResumeFit({
+      job: {
+        title: jobRow.title,
+        company: jobRow.company,
+        description: jobRow.description,
+        requirements: jobRow.requirements,
+        niceToHaves: jobRow.niceToHaves,
+      },
+      resumeText,
+    });
+  } catch {
+    await db.insert(resumeJobFit).values({
+      id,
+      userId,
+      jobId,
+      resumeId,
+      status: "failed",
+      errorSummary: FIT_CHECK_FAILURE_MESSAGE,
+      score: null,
+      modelMetadata: {
+        model: MODELS.REVIEWER,
+        checkedAt,
+        rubricVersion: RESUME_FIT_RUBRIC_VERSION,
+        baselineScore: baseline.score,
+      },
+    });
+    throw new Error(FIT_CHECK_FAILURE_MESSAGE);
+  }
   const scoreGap = Math.abs(fit.score - baseline.score);
   const concerns =
     scoreGap >= 30
@@ -58,12 +83,13 @@ export async function runResumeJobFit({
         ]
       : fit.concerns;
 
-  const id = randomUUID();
   await db.insert(resumeJobFit).values({
     id,
     userId,
     jobId,
     resumeId,
+    status: "completed",
+    errorSummary: null,
     score: fit.score,
     matchingEvidence: fit.matchingEvidence,
     missingRequirements: fit.missingRequirements,
@@ -71,7 +97,7 @@ export async function runResumeJobFit({
     recommendations: fit.recommendations,
     modelMetadata: {
       model: MODELS.REVIEWER,
-      checkedAt: new Date().toISOString(),
+      checkedAt,
       rubricVersion: RESUME_FIT_RUBRIC_VERSION,
       baselineScore: baseline.score,
       scoreGap,

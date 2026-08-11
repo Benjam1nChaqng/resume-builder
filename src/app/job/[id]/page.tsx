@@ -168,7 +168,9 @@ export default async function JobPage({
           </p>
 
           <div className="mt-4 space-y-3">
-            {resumes.map((r) => (
+            {resumes.map((r) => {
+              const latestFit = latestFitsByResume.get(r.id);
+              return (
               <div
                 key={r.id}
                 className={`flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between ${
@@ -184,9 +186,11 @@ export default async function JobPage({
                   >
                     {r.title}
                   </Link>
-                  {latestFitsByResume.get(r.id) && (
+                  {latestFit && (
                     <p className="mt-1 text-xs text-neutral-500">
-                      Latest score: {latestFitsByResume.get(r.id)!.score}/100
+                      {latestFit.status === "failed"
+                        ? "Latest check failed"
+                        : `Latest score: ${latestFit.score}/100`}
                     </p>
                   )}
                 </div>
@@ -208,7 +212,8 @@ export default async function JobPage({
                   </form>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {tailoredResumeId && (
@@ -249,7 +254,24 @@ export default async function JobPage({
             )}
           </div>
 
-          {activeFit && (
+          {activeFit?.status === "failed" ? (
+            <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-5 dark:border-red-900 dark:bg-red-950/40">
+              <p className="font-medium text-red-800 dark:text-red-200">
+                {activeFit.errorSummary ??
+                  "Fit check failed. Review the inputs and try again."}
+              </p>
+              <p className="mt-1 text-xs text-red-700 dark:text-red-300">
+                {activeResume?.title ?? "Selected resume"} checked{" "}
+                {new Date(activeFit.createdAt).toLocaleString()}
+              </p>
+              {activeFit.modelMetadata?.baselineScore !== undefined && (
+                <p className="mt-2 text-xs text-red-700 dark:text-red-300">
+                  Deterministic baseline completed at{" "}
+                  {activeFit.modelMetadata.baselineScore}/100.
+                </p>
+              )}
+            </div>
+          ) : activeFit && activeFit.score !== null ? (
             <div className="mt-6 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
               <div className="text-3xl font-semibold text-neutral-900 dark:text-neutral-50">
                 {activeFit.score}/100
@@ -286,7 +308,7 @@ export default async function JobPage({
                 <ListBlock title="Recommendations" items={activeFit.recommendations} />
               </div>
             </div>
-          )}
+          ) : null}
         </section>
 
         <JobTailorPanel jobId={jd.id} resumes={resumes} />

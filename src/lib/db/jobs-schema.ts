@@ -252,7 +252,9 @@ export const resumeJobFit = pgTable(
     resumeId: text("resume_id")
       .notNull()
       .references(() => resume.id, { onDelete: "cascade" }),
-    score: integer("score").notNull(),
+    status: text("status").default("completed").notNull(),
+    errorSummary: text("error_summary"),
+    score: integer("score"),
     matchingEvidence: jsonb("matching_evidence")
       .$type<ResumeJobFitFinding[]>()
       .default(sql`'[]'::jsonb`)
@@ -277,7 +279,11 @@ export const resumeJobFit = pgTable(
     index("resume_job_fit_job_resume_idx").on(table.jobId, table.resumeId),
     check(
       "resume_job_fit_score_check",
-      sql`${table.score} between 0 and 100`,
+      sql`${table.score} is null or ${table.score} between 0 and 100`,
+    ),
+    check(
+      "resume_job_fit_status_check",
+      sql`(${table.status} = 'completed' and ${table.score} is not null and ${table.errorSummary} is null) or (${table.status} = 'failed' and ${table.score} is null and ${table.errorSummary} is not null)`,
     ),
   ],
 );

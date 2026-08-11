@@ -64,6 +64,13 @@
       "when": 1786477260096,
       "tag": "0008_hot_banshee",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786477840918,
+      "tag": "0009_majestic_skin",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,7 @@ const mockCreateTailoredResumeCopy = vi.fn();
 const mockMarkJobApplied = vi.fn();
 const mockUpdateJobSource = vi.fn();
 const mockJobSourceUpdateSafeParse = vi.fn();
+const mockRunResumeJobFit = vi.fn();
 const mockRedirect = vi.fn((url: string) => {
   const err = new Error(`REDIRECT:${url}`);
   // Tag like Next.js redirect throws (the test only needs to verify the redirect path).
@@ -56,7 +57,8 @@ vi.mock("@/lib/jobs/discovery-repo", () => ({
 }));
 
 vi.mock("@/lib/jobs/fit", () => ({
-  runResumeJobFit: vi.fn(),
+  FIT_CHECK_FAILURE_MESSAGE: "Fit check failed safely.",
+  runResumeJobFit: mockRunResumeJobFit,
 }));
 
 vi.mock("@/lib/jobs/run-discovery", () => ({
@@ -80,6 +82,7 @@ beforeEach(() => {
   mockMarkJobApplied.mockReset();
   mockUpdateJobSource.mockReset();
   mockJobSourceUpdateSafeParse.mockReset();
+  mockRunResumeJobFit.mockReset();
   mockRedirect.mockClear();
 });
 
@@ -228,5 +231,28 @@ describe("updateJobSourceAction", () => {
       updateJobSourceAction("source-1", "Acme", "not-a-url"),
     ).resolves.toEqual({ ok: false, error: "Invalid URL" });
     expect(mockUpdateJobSource).not.toHaveBeenCalled();
+  });
+});
+
+describe("runResumeJobFitAction", () => {
+  it("redirects back to the selected resume after a persisted model failure", async () => {
+    mockRunResumeJobFit.mockRejectedValueOnce(
+      new Error("Fit check failed safely."),
+    );
+
+    const { runResumeJobFitAction } = await import("./jobs");
+    await expect(
+      runResumeJobFitAction("job-1", "resume-1"),
+    ).rejects.toThrow(/REDIRECT:\/job\/job-1\?resume=resume-1/);
+  });
+
+  it("does not hide unexpected persistence failures", async () => {
+    mockRunResumeJobFit.mockRejectedValueOnce(new Error("database unavailable"));
+
+    const { runResumeJobFitAction } = await import("./jobs");
+    await expect(
+      runResumeJobFitAction("job-1", "resume-1"),
+    ).rejects.toThrow(/database unavailable/);
+    expect(mockRedirect).not.toHaveBeenCalled();
   });
 });

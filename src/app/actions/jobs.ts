@@ -20,7 +20,10 @@ import {
   updateJobSourceForUser,
   updateListingStatusForUser,
 } from "@/lib/jobs/discovery-repo";
-import { runResumeJobFit } from "@/lib/jobs/fit";
+import {
+  FIT_CHECK_FAILURE_MESSAGE,
+  runResumeJobFit,
+} from "@/lib/jobs/fit";
 import { runJobDiscovery } from "@/lib/jobs/run-discovery";
 import { saveDiscoveredListingForUser } from "@/lib/jobs/save-listing";
 import {
@@ -240,7 +243,17 @@ export async function runResumeJobFitAction(
   jobId: string,
   resumeId: string,
 ): Promise<void> {
-  await runResumeJobFit({ jobId, resumeId });
+  try {
+    await runResumeJobFit({ jobId, resumeId });
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      error.message !== FIT_CHECK_FAILURE_MESSAGE
+    ) {
+      throw error;
+    }
+    // The service persists a safe failed result for the selected resume.
+  }
   redirect(`/job/${jobId}?resume=${resumeId}`);
 }
 
