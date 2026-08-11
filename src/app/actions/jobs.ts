@@ -20,7 +20,10 @@ import {
 import { runResumeJobFit } from "@/lib/jobs/fit";
 import { runJobDiscovery } from "@/lib/jobs/run-discovery";
 import { saveDiscoveredListingForUser } from "@/lib/jobs/save-listing";
-import { createTailoredResumeCopy } from "@/lib/jobs/tailored-resume";
+import {
+  createTailoredResumeCopy,
+  type TailoredBulletChange,
+} from "@/lib/jobs/tailored-resume";
 import {
   tailorResumeForJob,
   type TailorResumeResult,
@@ -192,13 +195,13 @@ export async function runResumeJobFitAction(
   resumeId: string,
 ): Promise<void> {
   await runResumeJobFit({ jobId, resumeId });
-  redirect(`/job/${jobId}`);
+  redirect(`/job/${jobId}?resume=${resumeId}`);
 }
 
 export async function createTailoredResumeCopyAction(
   jobId: string,
   resumeId: string,
-): Promise<void> {
-  const tailoredResumeId = await createTailoredResumeCopy({ jobId, resumeId });
-  redirect(`/resume/${tailoredResumeId}`);
+  acceptedChanges: TailoredBulletChange[],
+): Promise<string> {
+  return createTailoredResumeCopy({ jobId, resumeId, acceptedChanges });
 }

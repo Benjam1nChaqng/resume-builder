@@ -8,10 +8,9 @@ import { application, job, resumeJobFit } from "@/lib/db/jobs-schema";
 import { resume } from "@/lib/db/resume-schema";
 import { JobTailorPanel } from "@/components/job-tailor-panel";
 import {
-  createTailoredResumeCopyAction,
   runResumeJobFitAction,
 } from "@/app/actions/jobs";
-import { Button } from "@/components/ui/button";
+import { PendingSubmitButton } from "@/components/pending-submit-button";
 
 type RouteParams = { id: string };
 
@@ -25,10 +24,13 @@ function formatSalary(min: number | null, max: number | null): string | null {
 
 export default async function JobPage({
   params,
+  searchParams,
 }: {
   params: Promise<RouteParams>;
+  searchParams: Promise<{ resume?: string }>;
 }) {
   const { id } = await params;
+  const { resume: requestedResumeId } = await searchParams;
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     redirect("/sign-in");
@@ -54,7 +56,12 @@ export default async function JobPage({
     db
       .select()
       .from(resumeJobFit)
-      .where(eq(resumeJobFit.jobId, jd.id))
+      .where(
+        and(
+          eq(resumeJobFit.jobId, jd.id),
+          eq(resumeJobFit.userId, session.user.id),
+        ),
+      )
       .orderBy(desc(resumeJobFit.createdAt)),
     db
       .select({ resumeId: application.resumeId, status: application.status })
@@ -62,6 +69,11 @@ export default async function JobPage({
       .where(eq(application.jobId, jd.id)),
   ]);
   const tailoredResumeId = applications.find((a) => a.resumeId)?.resumeId ?? null;
+  const activeResumeId = resumes.some((resumeRow) => resumeRow.id === requestedResumeId)
+    ? requestedResumeId!
+    : (fits[0]?.resumeId ?? resumes[0]?.id ?? null);
+  const activeFit = fits.find((fit) => fit.resumeId === activeResumeId) ?? null;
+  const activeResume = resumes.find((resumeRow) => resumeRow.id === activeResumeId);
 
   const salary = formatSalary(jd.salaryMin, jd.salaryMax);
 
@@ -144,11 +156,25 @@ export default async function JobPage({
             {resumes.map((r) => (
               <div
                 key={r.id}
-                className="flex flex-col gap-3 rounded-lg border border-neutral-200 p-4 dark:border-neutral-800 sm:flex-row sm:items-center sm:justify-between"
+                className={`flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between ${
+                  r.id === activeResumeId
+                    ? "border-neutral-900 dark:border-neutral-100"
+                    : "border-neutral-200 dark:border-neutral-800"
+                }`}
               >
-                <span className="font-medium text-neutral-900 dark:text-neutral-50">
-                  {r.title}
-                </span>
+                <div>
+                  <Link
+                    href={`/job/${jd.id}?resume=${r.id}`}
+                    className="font-medium text-neutral-900 underline-offset-4 hover:underline dark:text-neutral-50"
+                  >
+                    {r.title}
+                  </Link>
+                  {fits.find((fit) => fit.resumeId === r.id) && (
+                    <p className="mt-1 text-xs text-neutral-500">
+                      Latest score: {fits.find((fit) => fit.resumeId === r.id)!.score}/100
+                    </p>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   <form
                     action={async () => {
@@ -156,19 +182,14 @@ export default async function JobPage({
                       await runResumeJobFitAction(jd.id, r.id);
                     }}
                   >
-                    <Button type="submit" variant="outline" size="sm">
+                    <PendingSubmitButton
+                      type="submit"
+                      variant="outline"
+                      size="sm"
+                      pendingLabel="Checking..."
+                    >
                       Run fit check
-                    </Button>
-                  </form>
-                  <form
-                    action={async () => {
-                      "use server";
-                      await createTailoredResumeCopyAction(jd.id, r.id);
-                    }}
-                  >
-                    <Button type="submit" size="sm">
-                      Create tailored copy
-                    </Button>
+                    </PendingSubmitButton>
                   </form>
                 </div>
               </div>
@@ -189,19 +210,19 @@ export default async function JobPage({
             </div>
           )}
 
-          {fits[0] && (
+          {activeFit && (
             <div className="mt-6 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">
               <div className="text-3xl font-semibold text-neutral-900 dark:text-neutral-50">
-                {fits[0].score}/100
+                {activeFit.score}/100
               </div>
               <p className="mt-1 text-xs text-neutral-500">
-                Latest fit check from {new Date(fits[0].createdAt).toLocaleString()}
+                {activeResume?.title ?? "Selected resume"} checked {new Date(activeFit.createdAt).toLocaleString()}
               </p>
               <div className="mt-4 grid gap-5 md:grid-cols-2">
-                <ListBlock title="Matching evidence" items={fits[0].matchingEvidence.map((f) => `${f.label}: ${f.evidence}`)} />
-                <ListBlock title="Missing requirements" items={fits[0].missingRequirements} />
-                <ListBlock title="Concerns" items={fits[0].concerns} />
-                <ListBlock title="Recommendations" items={fits[0].recommendations} />
+                <ListBlock title="Matching evidence" items={activeFit.matchingEvidence.map((f) => `${f.label}: ${f.evidence}`)} />
+                <ListBlock title="Missing requirements" items={activeFit.missingRequirements} />
+                <ListBlock title="Concerns" items={activeFit.concerns} />
+                <ListBlock title="Recommendations" items={activeFit.recommendations} />
               </div>
             </div>
           )}

@@ -4,6 +4,7 @@ const mockGetSession = vi.fn();
 const mockCreateJobForUser = vi.fn();
 const mockTailorResumeForJob = vi.fn();
 const mockSaveDiscoveredListing = vi.fn();
+const mockCreateTailoredResumeCopy = vi.fn();
 const mockRedirect = vi.fn((url: string) => {
   const err = new Error(`REDIRECT:${url}`);
   // Tag like Next.js redirect throws (the test only needs to verify the redirect path).
@@ -58,7 +59,7 @@ vi.mock("@/lib/jobs/save-listing", () => ({
 }));
 
 vi.mock("@/lib/jobs/tailored-resume", () => ({
-  createTailoredResumeCopy: vi.fn(),
+  createTailoredResumeCopy: mockCreateTailoredResumeCopy,
 }));
 
 beforeEach(() => {
@@ -66,6 +67,7 @@ beforeEach(() => {
   mockCreateJobForUser.mockReset();
   mockTailorResumeForJob.mockReset();
   mockSaveDiscoveredListing.mockReset();
+  mockCreateTailoredResumeCopy.mockReset();
   mockRedirect.mockClear();
 });
 
@@ -140,6 +142,29 @@ describe("saveDiscoveredListingAction", () => {
     expect(mockSaveDiscoveredListing).toHaveBeenCalledWith({
       userId: "user-1",
       listingId: "listing-1",
+    });
+  });
+});
+
+describe("createTailoredResumeCopyAction", () => {
+  it("passes only the accepted bullet changes to copy creation", async () => {
+    const acceptedChanges = [
+      {
+        experienceId: "exp-1",
+        bulletId: "bullet-1",
+        text: "Tailored evidence-backed bullet",
+      },
+    ];
+    mockCreateTailoredResumeCopy.mockResolvedValueOnce("resume-tailored");
+
+    const { createTailoredResumeCopyAction } = await import("./jobs");
+    await expect(
+      createTailoredResumeCopyAction("job-1", "resume-1", acceptedChanges),
+    ).resolves.toBe("resume-tailored");
+    expect(mockCreateTailoredResumeCopy).toHaveBeenCalledWith({
+      jobId: "job-1",
+      resumeId: "resume-1",
+      acceptedChanges,
     });
   });
 });

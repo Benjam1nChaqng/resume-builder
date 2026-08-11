@@ -61,23 +61,23 @@ Priority meanings:
 - [x] Prevent saving a listing URL supplied independently of the authorized listing row.
 - [x] Convert a saved listing into one structured `job` record idempotently.
 - [ ] Preserve the discovery source and listing link on the structured job.
-- [ ] Move listing status to tailored when a tailored resume is created.
+- [x] Move listing status to tailored when a tailored resume is created.
 - [ ] Add an applied action with application date and optional notes.
 - [ ] Show the full listing/application state history on the job page.
 - [ ] Add integration tests for duplicate discovery and every state transition.
 
 ### Fit and tailoring
 
-- [ ] Verify job and resume ownership belong to the same authenticated user in one service boundary.
+- [x] Verify job and resume ownership belong to the same authenticated user in one service boundary.
 - [ ] Persist fit-check failure state and safe retry messaging.
 - [ ] Include requirement-level source evidence and confidence in the fit contract.
 - [ ] Separate hard requirements, preferred requirements, concerns, and unsupported claims.
 - [ ] Add a deterministic non-LLM baseline score for testing and comparison.
-- [ ] Show fit results for the selected resume instead of only the latest job-wide result.
-- [ ] Let users accept or reject individual proposed bullet changes.
-- [ ] Apply only accepted changes to the tailored copy.
-- [ ] Preserve every source resume row and original bullet exactly.
-- [ ] Prevent duplicate tailored applications or define an explicit versioning policy.
+- [x] Show fit results for the selected resume instead of only the latest job-wide result.
+- [x] Let users accept or reject individual proposed bullet changes.
+- [x] Apply only accepted changes to the tailored copy.
+- [x] Preserve every source resume row and original bullet exactly.
+- [x] Reuse the application record while creating explicit tailored resume versions.
 - [ ] Add service tests proving source rows are unchanged after tailoring.
 - [ ] Add failure-injection tests proving partial tailored copies are cleaned up.
 

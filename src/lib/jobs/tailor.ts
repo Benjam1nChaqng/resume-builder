@@ -29,8 +29,13 @@ export async function tailorResumeForJob({
   jobId: string;
   resumeId: string;
 }): Promise<TailorResumeResult> {
-  await requireJobAccess(jobId);
-  await requireResumeAccess(resumeId);
+  const [jobAccess, resumeAccess] = await Promise.all([
+    requireJobAccess(jobId),
+    requireResumeAccess(resumeId),
+  ]);
+  if (jobAccess.userId !== resumeAccess.userId) {
+    throw new Error("Job and resume owners do not match.");
+  }
 
   const [jobData, resumeData] = await Promise.all([
     loadJobForTailoring(jobId),

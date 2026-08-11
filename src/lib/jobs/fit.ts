@@ -15,10 +15,14 @@ export async function runResumeJobFit({
   jobId: string;
   resumeId: string;
 }): Promise<string> {
-  const [{ userId }] = await Promise.all([
+  const [jobAccess, resumeAccess] = await Promise.all([
     requireJobAccess(jobId),
     requireResumeAccess(resumeId),
   ]);
+  if (jobAccess.userId !== resumeAccess.userId) {
+    throw new Error("Job and resume owners do not match.");
+  }
+  const { userId } = jobAccess;
 
   const [jobRow] = await db.select().from(job).where(eq(job.id, jobId)).limit(1);
   const resumeData = await loadRenderableResume(resumeId);
@@ -54,4 +58,3 @@ export async function runResumeJobFit({
   });
   return id;
 }
-

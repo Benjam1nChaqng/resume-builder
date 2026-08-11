@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@/lib/db";
-import { application, job } from "@/lib/db/jobs-schema";
+import { application, job, jobListing } from "@/lib/db/jobs-schema";
 import {
   bullet,
   contactInfo,
@@ -12,8 +13,51 @@ import {
   skill,
 } from "@/lib/db/resume-schema";
 import { loadRenderableResume } from "@/lib/resumes/render";
+import { requireResumeAccess } from "@/lib/resumes/access";
 import { requireJobAccess } from "./access";
-import { tailorResumeForJob } from "./tailor";
+
+export const TailoredBulletChangeSchema = z.object({
+  experienceId: z.string().min(1),
+  bulletId: z.string().min(1),
+  text: z.string().trim().min(1).max(2_000),
+});
+
+export const TailoredBulletChangesSchema = z
+  .array(TailoredBulletChangeSchema)
+  .max(500);
+
+export type TailoredBulletChange = z.infer<typeof TailoredBulletChangeSchema>;
+
+type SourceExperience = {
+  id: string;
+  bullets: Array<{ id: string }>;
+};
+
+export function buildTailoredBulletReplacements(
+  experiences: SourceExperience[],
+  changes: TailoredBulletChange[],
+): Map<string, string> {
+  const parsed = TailoredBulletChangesSchema.parse(changes);
+  const validPairs = new Set(
+    experiences.flatMap((experienceRow) =>
+      experienceRow.bullets.map(
+        (bulletRow) => `${experienceRow.id}:${bulletRow.id}`,
+      ),
+    ),
+  );
+  const replacements = new Map<string, string>();
+
+  for (const change of parsed) {
+    if (!validPairs.has(`${change.experienceId}:${change.bulletId}`)) {
+      throw new Error("A tailored bullet does not belong to the source resume.");
+    }
+    if (replacements.has(change.bulletId)) {
+      throw new Error("A tailored bullet was submitted more than once.");
+    }
+    replacements.set(change.bulletId, change.text);
+  }
+  return replacements;
+}
 
 export function buildTailoredResumeTitle({
   baseTitle,
@@ -30,19 +74,27 @@ export function buildTailoredResumeTitle({
 export async function createTailoredResumeCopy({
   jobId,
   resumeId,
+  acceptedChanges,
 }: {
   jobId: string;
   resumeId: string;
+  acceptedChanges: TailoredBulletChange[];
 }): Promise<string> {
-  const { userId } = await requireJobAccess(jobId);
+  const [jobAccess, resumeAccess] = await Promise.all([
+    requireJobAccess(jobId),
+    requireResumeAccess(resumeId),
+  ]);
+  if (jobAccess.userId !== resumeAccess.userId) {
+    throw new Error("Job and resume owners do not match.");
+  }
+  const { userId } = jobAccess;
   const [jobRow] = await db.select().from(job).where(eq(job.id, jobId)).limit(1);
   const source = await loadRenderableResume(resumeId);
   if (!jobRow) throw new Error("Job not found.");
   if (!source || source.userId !== userId) throw new Error("Resume not found.");
-
-  const tailored = await tailorResumeForJob({ jobId, resumeId });
-  const tailoredByExperience = new Map(
-    tailored.experiences.map((exp) => [exp.experienceId, exp.tailored]),
+  const replacements = buildTailoredBulletReplacements(
+    source.experiences,
+    acceptedChanges,
   );
 
   const [newResume] = await db
@@ -91,14 +143,13 @@ export async function createTailoredResumeCopy({
         .returning({ id: experience.id });
       if (!newExp) continue;
 
-      const tailoredBullets = tailoredByExperience.get(exp.id) ?? [];
       if (exp.bullets.length > 0) {
         await db.insert(bullet).values(
           exp.bullets.map((b, j) => ({
             id: randomUUID(),
             experienceId: newExp.id,
-            text: tailoredBullets[j]?.text ?? b.text,
-            originalText: b.text,
+            text: replacements.get(b.id) ?? b.text,
+            originalText: b.originalText ?? b.text,
             sortOrder: j,
           })),
         );
@@ -166,6 +217,11 @@ export async function createTailoredResumeCopy({
         status: "tailored",
       });
     }
+
+    await db
+      .update(jobListing)
+      .set({ status: "tailored" })
+      .where(eq(jobListing.jobId, jobId));
 
     return newResume.id;
   } catch (err) {

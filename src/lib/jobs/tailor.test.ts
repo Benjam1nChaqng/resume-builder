@@ -136,6 +136,19 @@ describe("tailorResumeForJob", () => {
     expect(result.experiences).toEqual([]);
   });
 
+  it("rejects mismatched owners before loading job or resume content", async () => {
+    mockRequireJobAccess.mockResolvedValueOnce({ userId: "user-1" });
+    mockRequireResumeAccess.mockResolvedValueOnce({ userId: "user-2" });
+
+    const { tailorResumeForJob } = await import("./tailor");
+    await expect(
+      tailorResumeForJob({ jobId: "job-1", resumeId: "resume-2" }),
+    ).rejects.toThrow(/owners do not match/);
+
+    expect(mockLoadJobForTailoring).not.toHaveBeenCalled();
+    expect(mockLoadResumeForTailoring).not.toHaveBeenCalled();
+  });
+
   it("skips experiences with no bullets — no Claude call, no entry in output", async () => {
     mockRequireJobAccess.mockResolvedValueOnce({ userId: "user-1" });
     mockRequireResumeAccess.mockResolvedValueOnce({ userId: "user-1" });
