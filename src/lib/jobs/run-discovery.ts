@@ -1,11 +1,10 @@
-import { parseJobListingsFromHtml } from "./discovery";
-import { fetchPublicHtml } from "./public-web";
 import {
   completeDiscoveryRun,
   createDiscoveryRun,
   getEnabledSourcesForProfile,
   upsertDiscoveredListings,
 } from "./discovery-repo";
+import { discoverListingsFromSource } from "./source-adapters";
 
 export async function runJobDiscovery({
   profileId,
@@ -21,8 +20,7 @@ export async function runJobDiscovery({
 
   for (const source of sources) {
     try {
-      const { html, finalUrl } = await fetchPublicHtml(source.url);
-      const listings = parseJobListingsFromHtml(html, finalUrl);
+      const listings = await discoverListingsFromSource(source.url);
       discovered += await upsertDiscoveredListings({
         profileId,
         sourceId: source.id,

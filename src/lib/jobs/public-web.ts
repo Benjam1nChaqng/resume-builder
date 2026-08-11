@@ -13,15 +13,22 @@ const BLOCKED_HOSTNAMES = new Set([
 
 export type HostResolver = (hostname: string) => Promise<string[]>;
 
-export type FetchPublicHtmlOptions = {
+export type FetchPublicResourceOptions = {
   fetchImpl?: typeof fetch;
   resolver?: HostResolver;
   timeoutMs?: number;
   maxBytes?: number;
 };
 
+export type FetchPublicHtmlOptions = FetchPublicResourceOptions;
+
 export type PublicHtmlResult = {
   html: string;
+  finalUrl: string;
+};
+
+export type PublicJsonResult = {
+  data: unknown;
   finalUrl: string;
 };
 
@@ -195,10 +202,20 @@ async function readLimitedText(response: Response, maxBytes: number): Promise<st
   return new TextDecoder().decode(bytes);
 }
 
-export async function fetchPublicHtml(
+type PublicTextResult = {
+  text: string;
+  finalUrl: string;
+};
+
+async function fetchPublicText(
   rawUrl: string,
-  options: FetchPublicHtmlOptions = {},
-): Promise<PublicHtmlResult> {
+  options: FetchPublicResourceOptions,
+  responseType: {
+    accept: string;
+    acceptsContentType: (contentType: string) => boolean;
+    invalidContentMessage: string;
+  },
+): Promise<PublicTextResult> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const resolver = options.resolver ?? defaultResolver;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -215,7 +232,7 @@ export async function fetchPublicHtml(
         headers: {
           "User-Agent":
             "Mozilla/5.0 (compatible; ResumeBuilderBot/0.1; +https://github.com/Benjam1nChaqng/resume-builder)",
-          Accept: "text/html,application/xhtml+xml",
+          Accept: responseType.accept,
         },
         redirect: "manual",
         signal: controller.signal,
@@ -241,18 +258,48 @@ export async function fetchPublicHtml(
       throw new Error(`HTTP ${response.status}`);
     }
     const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
-    if (
-      !contentType.includes("text/html") &&
-      !contentType.includes("application/xhtml+xml")
-    ) {
-      throw new Error("Source did not return HTML content.");
+    if (!responseType.acceptsContentType(contentType)) {
+      throw new Error(responseType.invalidContentMessage);
     }
 
     return {
-      html: await readLimitedText(response, maxBytes),
+      text: await readLimitedText(response, maxBytes),
       finalUrl: safeUrl.toString(),
     };
   }
 
   throw new Error(`Source exceeded ${MAX_REDIRECTS} redirects.`);
+}
+
+export async function fetchPublicHtml(
+  rawUrl: string,
+  options: FetchPublicHtmlOptions = {},
+): Promise<PublicHtmlResult> {
+  const result = await fetchPublicText(rawUrl, options, {
+    accept: "text/html,application/xhtml+xml",
+    acceptsContentType: (contentType) =>
+      contentType.includes("text/html") ||
+      contentType.includes("application/xhtml+xml"),
+    invalidContentMessage: "Source did not return HTML content.",
+  });
+  return { html: result.text, finalUrl: result.finalUrl };
+}
+
+export async function fetchPublicJson(
+  rawUrl: string,
+  options: FetchPublicResourceOptions = {},
+): Promise<PublicJsonResult> {
+  const result = await fetchPublicText(rawUrl, options, {
+    accept: "application/json",
+    acceptsContentType: (contentType) =>
+      contentType.includes("application/json") ||
+      /application\/[^;]+\+json/.test(contentType),
+    invalidContentMessage: "Source did not return JSON content.",
+  });
+
+  try {
+    return { data: JSON.parse(result.text), finalUrl: result.finalUrl };
+  } catch {
+    throw new Error("Source returned invalid JSON content.");
+  }
 }

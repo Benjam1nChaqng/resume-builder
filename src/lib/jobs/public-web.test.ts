@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   assertPublicHttpUrl,
   fetchPublicHtml,
+  fetchPublicJson,
   isBlockedIpAddress,
   normalizeHttpUrl,
   type HostResolver,
@@ -89,6 +90,35 @@ describe("public web URL safety", () => {
         maxBytes: 5,
       }),
     ).rejects.toThrow(/limit/);
+  });
+
+  it("fetches typed JSON content and rejects invalid JSON", async () => {
+    const jsonFetch = vi.fn().mockResolvedValueOnce(
+      new Response('{"jobs":[]}', {
+        headers: { "content-type": "application/json; charset=utf-8" },
+      }),
+    );
+    await expect(
+      fetchPublicJson("https://example.com/jobs", {
+        fetchImpl: jsonFetch,
+        resolver: publicResolver,
+      }),
+    ).resolves.toEqual({
+      data: { jobs: [] },
+      finalUrl: "https://example.com/jobs",
+    });
+
+    const invalidJsonFetch = vi.fn().mockResolvedValueOnce(
+      new Response("not-json", {
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    await expect(
+      fetchPublicJson("https://example.com/jobs", {
+        fetchImpl: invalidJsonFetch,
+        resolver: publicResolver,
+      }),
+    ).rejects.toThrow(/invalid JSON/);
   });
 
   it("aborts requests that exceed the timeout", async () => {

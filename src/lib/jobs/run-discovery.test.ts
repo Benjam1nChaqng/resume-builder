@@ -4,7 +4,7 @@ const mockGetSources = vi.fn();
 const mockCreateRun = vi.fn();
 const mockCompleteRun = vi.fn();
 const mockUpsertListings = vi.fn();
-const mockFetchPublicHtml = vi.fn();
+const mockDiscoverListings = vi.fn();
 
 vi.mock("./discovery-repo", () => ({
   getEnabledSourcesForProfile: mockGetSources,
@@ -13,8 +13,8 @@ vi.mock("./discovery-repo", () => ({
   upsertDiscoveredListings: mockUpsertListings,
 }));
 
-vi.mock("./public-web", () => ({
-  fetchPublicHtml: mockFetchPublicHtml,
+vi.mock("./source-adapters", () => ({
+  discoverListingsFromSource: mockDiscoverListings,
 }));
 
 beforeEach(() => {
@@ -22,7 +22,7 @@ beforeEach(() => {
   mockCreateRun.mockReset();
   mockCompleteRun.mockReset();
   mockUpsertListings.mockReset();
-  mockFetchPublicHtml.mockReset();
+  mockDiscoverListings.mockReset();
 });
 
 describe("runJobDiscovery", () => {
@@ -31,10 +31,14 @@ describe("runJobDiscovery", () => {
       { id: "source-1", label: "Acme", url: "https://acme.test/careers" },
     ]);
     mockCreateRun.mockResolvedValueOnce("run-1");
-    mockFetchPublicHtml.mockResolvedValueOnce({
-      finalUrl: "https://acme.test/careers",
-      html: '<a href="/jobs/1">Warehouse Associate</a>',
-    });
+    mockDiscoverListings.mockResolvedValueOnce([
+      {
+        canonicalUrl: "https://acme.test/jobs/1",
+        title: "Warehouse Associate",
+        company: "Acme",
+        location: null,
+      },
+    ]);
     mockUpsertListings.mockResolvedValueOnce(0);
 
     const { runJobDiscovery } = await import("./run-discovery");
@@ -49,7 +53,7 @@ describe("runJobDiscovery", () => {
       { id: "source-1", label: "Unsafe", url: "http://localhost/jobs" },
     ]);
     mockCreateRun.mockResolvedValueOnce("run-2");
-    mockFetchPublicHtml.mockRejectedValueOnce(new Error("Private URL blocked"));
+    mockDiscoverListings.mockRejectedValueOnce(new Error("Private URL blocked"));
 
     const { runJobDiscovery } = await import("./run-discovery");
     const result = await runJobDiscovery({ profileId: "profile-1", userId: "user-1" });
