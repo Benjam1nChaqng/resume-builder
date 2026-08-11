@@ -7,6 +7,10 @@ const mockSaveDiscoveredListing = vi.fn();
 const mockCreateTailoredResumeCopy = vi.fn();
 const mockMarkJobApplied = vi.fn();
 const mockUpdateJobSource = vi.fn();
+const mockCreateJobSearchProfile = vi.fn();
+const mockCreateJobSource = vi.fn();
+const mockJobSearchProfileSafeParse = vi.fn();
+const mockJobSourceSafeParse = vi.fn();
 const mockJobSourceUpdateSafeParse = vi.fn();
 const mockRunResumeJobFit = vi.fn();
 const mockRedirect = vi.fn((url: string) => {
@@ -40,14 +44,17 @@ vi.mock("@/lib/jobs/application-state", () => ({
 }));
 
 vi.mock("@/lib/jobs/discovery", () => ({
-  JobSearchProfileInputSchema: { parse: vi.fn((value) => value) },
-  JobSourceInputSchema: { parse: vi.fn((value) => value) },
+  JobSearchProfileInputSchema: {
+    parse: vi.fn((value) => value),
+    safeParse: mockJobSearchProfileSafeParse,
+  },
+  JobSourceInputSchema: { safeParse: mockJobSourceSafeParse },
   JobSourceUpdateSchema: { safeParse: mockJobSourceUpdateSafeParse },
 }));
 
 vi.mock("@/lib/jobs/discovery-repo", () => ({
-  createJobSearchProfile: vi.fn(),
-  createJobSourceForUser: vi.fn(),
+  createJobSearchProfile: mockCreateJobSearchProfile,
+  createJobSourceForUser: mockCreateJobSource,
   deleteJobSearchProfileForUser: vi.fn(),
   deleteJobSourceForUser: vi.fn(),
   setJobSourceEnabledForUser: vi.fn(),
@@ -81,6 +88,10 @@ beforeEach(() => {
   mockCreateTailoredResumeCopy.mockReset();
   mockMarkJobApplied.mockReset();
   mockUpdateJobSource.mockReset();
+  mockCreateJobSearchProfile.mockReset();
+  mockCreateJobSource.mockReset();
+  mockJobSearchProfileSafeParse.mockReset();
+  mockJobSourceSafeParse.mockReset();
   mockJobSourceUpdateSafeParse.mockReset();
   mockRunResumeJobFit.mockReset();
   mockRedirect.mockClear();
@@ -140,6 +151,132 @@ describe("tailorResumeForJobAction", () => {
     expect(mockTailorResumeForJob).toHaveBeenCalledWith({
       jobId: "job-1",
       resumeId: "resume-1",
+    });
+  });
+});
+
+const initialDiscoveryFormState = {
+  fieldErrors: {},
+  formError: null,
+};
+
+describe("createJobSearchProfileAction", () => {
+  it("returns field errors without writing an invalid profile", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    mockJobSearchProfileSafeParse.mockReturnValueOnce({
+      success: false,
+      error: {
+        flatten: () => ({ fieldErrors: { targetRoles: ["Choose a role"] } }),
+      },
+    });
+    const formData = new FormData();
+    formData.set("candidateName", "Maya");
+    formData.set("targetRoles", "");
+    formData.set("warehouse", "on");
+
+    const { createJobSearchProfileAction } = await import("./jobs");
+    await expect(
+      createJobSearchProfileAction(initialDiscoveryFormState, formData),
+    ).resolves.toMatchObject({
+      fieldErrors: { targetRoles: ["Choose a role"] },
+      formError: null,
+      values: {
+        candidateName: "Maya",
+        targetRoles: "",
+        warehouse: "on",
+      },
+    });
+    expect(mockCreateJobSearchProfile).not.toHaveBeenCalled();
+  });
+
+  it("creates an owned profile and redirects to it", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    const input = {
+      candidateName: "Maya",
+      targetRoles: ["Barista"],
+      remotePreference: "any",
+    };
+    mockJobSearchProfileSafeParse.mockReturnValueOnce({
+      success: true,
+      data: input,
+    });
+    mockCreateJobSearchProfile.mockResolvedValueOnce("profile-1");
+
+    const { createJobSearchProfileAction } = await import("./jobs");
+    await expect(
+      createJobSearchProfileAction(initialDiscoveryFormState, new FormData()),
+    ).rejects.toThrow(/REDIRECT:\/jobs\/discover\?profile=profile-1/);
+    expect(mockCreateJobSearchProfile).toHaveBeenCalledWith("user-1", input);
+  });
+});
+
+describe("createJobSourceAction", () => {
+  it("returns URL validation errors without writing a source", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    mockJobSourceSafeParse.mockReturnValueOnce({
+      success: false,
+      error: {
+        flatten: () => ({ fieldErrors: { url: ["Enter a valid URL"] } }),
+      },
+    });
+
+    const formData = new FormData();
+    formData.set("label", "Acme");
+    formData.set("url", "not-a-url");
+    const { createJobSourceAction } = await import("./jobs");
+    await expect(
+      createJobSourceAction(initialDiscoveryFormState, formData),
+    ).resolves.toMatchObject({
+      fieldErrors: { url: ["Enter a valid URL"] },
+      formError: null,
+      values: { label: "Acme", url: "not-a-url" },
+    });
+    expect(mockCreateJobSource).not.toHaveBeenCalled();
+  });
+
+  it("surfaces duplicate sources without leaking a database error", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    const input = {
+      profileId: "profile-1",
+      label: "Acme",
+      url: "https://acme.example/jobs",
+    };
+    mockJobSourceSafeParse.mockReturnValueOnce({ success: true, data: input });
+    mockCreateJobSource.mockRejectedValueOnce(
+      new Error("This source is already added to the profile."),
+    );
+
+    const { createJobSourceAction } = await import("./jobs");
+    await expect(
+      createJobSourceAction(initialDiscoveryFormState, new FormData()),
+    ).resolves.toMatchObject({
+      fieldErrors: {},
+      formError: "This source is already added to the profile.",
+    });
+  });
+
+  it("puts blocked-network feedback on the URL field", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    mockJobSourceSafeParse.mockReturnValueOnce({
+      success: true,
+      data: {
+        profileId: "profile-1",
+        label: "Unsafe",
+        url: "http://localhost/jobs",
+      },
+    });
+    mockCreateJobSource.mockRejectedValueOnce(
+      new Error("Private or local network URLs are not allowed."),
+    );
+
+    const { createJobSourceAction } = await import("./jobs");
+    await expect(
+      createJobSourceAction(initialDiscoveryFormState, new FormData()),
+    ).resolves.toMatchObject({
+      fieldErrors: {
+        url: ["Private or local network URLs are not allowed."],
+      },
+      formError: null,
     });
   });
 });

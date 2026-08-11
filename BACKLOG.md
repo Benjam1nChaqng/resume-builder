@@ -34,7 +34,7 @@ Priority meanings:
 - [x] Block localhost, link-local, private-network, and metadata-service targets to prevent SSRF.
 - [x] Revalidate resolved redirects before fetching source content.
 - [x] Add request timeout, response-size limit, and content-type validation.
-- [ ] Surface duplicate-source, invalid-source, and ownership errors in the UI.
+- [x] Surface duplicate-source, invalid-source, and ownership errors in the UI.
 - [x] Add a profile selector that does not silently choose only the newest profile.
 - [ ] Persist a selected or default search profile per user.
 

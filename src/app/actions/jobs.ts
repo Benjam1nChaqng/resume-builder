@@ -35,6 +35,17 @@ import {
   type TailorResumeResult,
 } from "@/lib/jobs/tailor";
 
+export type JobDiscoveryFormState = {
+  fieldErrors: Partial<Record<string, string[]>>;
+  formError: string | null;
+  values?: Record<string, string>;
+};
+
+const EMPTY_DISCOVERY_FORM_STATE: JobDiscoveryFormState = {
+  fieldErrors: {},
+  formError: null,
+};
+
 export async function createJobFromUrlAction(formData: FormData): Promise<void> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
@@ -75,8 +86,35 @@ function splitList(value: FormDataEntryValue | null): string[] {
     .filter(Boolean);
 }
 
-function parseSearchProfileForm(formData: FormData) {
-  return JobSearchProfileInputSchema.parse({
+function formStringValues(formData: FormData, names: string[]) {
+  return Object.fromEntries(
+    names.flatMap((name) => {
+      const value = formData.get(name);
+      return typeof value === "string" ? [[name, value] as const] : [];
+    }),
+  );
+}
+
+const PROFILE_FORM_FIELDS = [
+  "candidateName",
+  "targetRoles",
+  "locationPreference",
+  "remotePreference",
+  "experienceLevel",
+  "keywords",
+  "exclusions",
+  "partTime",
+  "hourly",
+  "entryLevel",
+  "retail",
+  "admin",
+  "service",
+  "warehouse",
+  "internship",
+];
+
+function searchProfileFormValue(formData: FormData) {
+  return {
     candidateName: formData.get("candidateName"),
     targetRoles: splitList(formData.get("targetRoles")),
     locationPreference:
@@ -102,17 +140,40 @@ function parseSearchProfileForm(formData: FormData) {
         "internship",
       ].map((filter) => [filter, formData.get(filter) === "on"]),
     ),
-  });
+  };
+}
+
+function parseSearchProfileForm(formData: FormData) {
+  return JobSearchProfileInputSchema.parse(searchProfileFormValue(formData));
 }
 
 export async function createJobSearchProfileAction(
+  _previousState: JobDiscoveryFormState,
   formData: FormData,
-): Promise<void> {
+): Promise<JobDiscoveryFormState> {
   const userId = await requireSessionUserId();
-  const profileId = await createJobSearchProfile(
-    userId,
-    parseSearchProfileForm(formData),
+  const values = formStringValues(formData, PROFILE_FORM_FIELDS);
+  const parsed = JobSearchProfileInputSchema.safeParse(
+    searchProfileFormValue(formData),
   );
+  if (!parsed.success) {
+    return {
+      fieldErrors: parsed.error.flatten().fieldErrors,
+      formError: null,
+      values,
+    };
+  }
+
+  let profileId: string;
+  try {
+    profileId = await createJobSearchProfile(userId, parsed.data);
+  } catch {
+    return {
+      ...EMPTY_DISCOVERY_FORM_STATE,
+      formError: "Unable to create this search profile right now.",
+      values,
+    };
+  }
   redirect(`/jobs/discover?profile=${profileId}`);
 }
 
@@ -140,15 +201,57 @@ export async function deleteJobSearchProfileAction(
   redirect("/jobs/discover");
 }
 
-export async function createJobSourceAction(formData: FormData): Promise<void> {
+export async function createJobSourceAction(
+  _previousState: JobDiscoveryFormState,
+  formData: FormData,
+): Promise<JobDiscoveryFormState> {
   const userId = await requireSessionUserId();
-  const input = JobSourceInputSchema.parse({
+  const values = formStringValues(formData, ["label", "url"]);
+  const parsed = JobSourceInputSchema.safeParse({
     profileId: formData.get("profileId"),
     label: formData.get("label"),
     url: formData.get("url"),
   });
-  await createJobSourceForUser(userId, input);
-  redirect(`/jobs/discover?profile=${input.profileId}`);
+  if (!parsed.success) {
+    return {
+      fieldErrors: parsed.error.flatten().fieldErrors,
+      formError: null,
+      values,
+    };
+  }
+
+  try {
+    await createJobSourceForUser(userId, parsed.data);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("already added")) {
+      return {
+        ...EMPTY_DISCOVERY_FORM_STATE,
+        formError: "This source is already added to the profile.",
+        values,
+      };
+    }
+    if (message.includes("Private or local")) {
+      return {
+        fieldErrors: { url: [message] },
+        formError: null,
+        values,
+      };
+    }
+    if (message.includes("profile not found")) {
+      return {
+        ...EMPTY_DISCOVERY_FORM_STATE,
+        formError: "The selected search profile is no longer available.",
+        values,
+      };
+    }
+    return {
+      ...EMPTY_DISCOVERY_FORM_STATE,
+      formError: "Unable to verify and add this source right now.",
+      values,
+    };
+  }
+  redirect(`/jobs/discover?profile=${parsed.data.profileId}`);
 }
 
 export async function setJobSourceEnabledAction(

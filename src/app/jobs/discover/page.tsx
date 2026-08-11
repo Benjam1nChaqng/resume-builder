@@ -6,15 +6,15 @@ import { auth } from "@/lib/auth";
 import { BASIC_JOB_FILTERS } from "@/lib/jobs/discovery";
 import { listDiscoveryData } from "@/lib/jobs/discovery-repo";
 import {
-  createJobSearchProfileAction,
-  createJobSourceAction,
   runJobDiscoveryAction,
   updateJobSearchProfileAction,
 } from "@/app/actions/jobs";
 import { DeleteJobSearchProfileButton } from "@/components/delete-job-search-profile-button";
 import { DiscoveredListingActions } from "@/components/discovered-listing-actions";
 import { JobSearchProfileSelector } from "@/components/job-search-profile-selector";
+import { JobSearchProfileCreateForm } from "@/components/job-search-profile-create-form";
 import { JobSourceActions } from "@/components/job-source-actions";
+import { JobSourceCreateForm } from "@/components/job-source-create-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -92,43 +92,7 @@ export default async function JobDiscoverPage({
                 <CardTitle>New search profile</CardTitle>
               </CardHeader>
               <CardContent>
-                <form action={createJobSearchProfileAction} className="space-y-4">
-                  <Field name="candidateName" label="Candidate" placeholder="Maya" prefix="new" />
-                  <Field
-                    name="targetRoles"
-                    label="Target roles"
-                    placeholder="barista, office assistant"
-                    prefix="new"
-                  />
-                  <Field
-                    name="locationPreference"
-                    label="Location"
-                    placeholder="Los Angeles or remote"
-                    prefix="new"
-                  />
-                  <div className="grid grid-cols-2 gap-3">
-                    <Select name="remotePreference" label="Remote" prefix="new">
-                      <option value="any">Any</option>
-                      <option value="remote">Remote</option>
-                      <option value="hybrid">Hybrid</option>
-                      <option value="onsite">Onsite</option>
-                    </Select>
-                    <Field name="experienceLevel" label="Level" placeholder="entry" prefix="new" />
-                  </div>
-                  <Field name="keywords" label="Keywords" placeholder="cashier, mornings" prefix="new" />
-                  <Field name="exclusions" label="Exclusions" placeholder="night shift" prefix="new" />
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {BASIC_JOB_FILTERS.map((filter) => (
-                      <label key={filter} className="flex items-center gap-2">
-                        <input type="checkbox" name={filter} />
-                        {filter}
-                      </label>
-                    ))}
-                  </div>
-                  <PendingSubmitButton type="submit" className="w-full" pendingLabel="Creating">
-                    Create profile
-                  </PendingSubmitButton>
-                </form>
+                <JobSearchProfileCreateForm />
               </CardContent>
             </Card>
 
@@ -138,25 +102,7 @@ export default async function JobDiscoverPage({
                   <CardTitle>Add source</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <form action={createJobSourceAction} className="space-y-4">
-                    <input type="hidden" name="profileId" value={activeProfile.id} />
-                    <Field name="label" label="Label" placeholder="Local coffee shops" prefix="source" />
-                    <Field
-                      name="url"
-                      label="Source URL"
-                      placeholder="https://example.com/careers"
-                      type="url"
-                      prefix="source"
-                    />
-                    <PendingSubmitButton
-                      type="submit"
-                      variant="outline"
-                      className="w-full"
-                      pendingLabel="Adding"
-                    >
-                      Add source
-                    </PendingSubmitButton>
-                  </form>
+                  <JobSourceCreateForm profileId={activeProfile.id} />
                   {activeProfile.sources.length > 0 && (
                     <ul className="mt-4 divide-y divide-neutral-200 border-t border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
                       {activeProfile.sources.map((source) => (

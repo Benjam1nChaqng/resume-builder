@@ -1,16 +1,7 @@
 import { z } from "zod";
 import { normalizeHttpUrl } from "./public-web";
 
-export const BASIC_JOB_FILTERS = [
-  "partTime",
-  "hourly",
-  "entryLevel",
-  "retail",
-  "admin",
-  "service",
-  "warehouse",
-  "internship",
-] as const;
+export { BASIC_JOB_FILTERS } from "./discovery-constants";
 
 export const JobSearchFiltersSchema = z.object({
   partTime: z.boolean().default(false),
