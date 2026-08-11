@@ -62,6 +62,7 @@ export const application = pgTable(
   (table) => [
     index("application_user_id_idx").on(table.userId),
     index("application_job_id_idx").on(table.jobId),
+    uniqueIndex("application_user_job_unique").on(table.userId, table.jobId),
     check(
       "application_status_check",
       sql`${table.status} in ('draft', 'tailored', 'applied')`,

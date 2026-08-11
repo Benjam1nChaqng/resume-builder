@@ -22,7 +22,7 @@ Priority meanings:
 - [ ] Verify migration `0003` against a disposable Postgres or Neon branch.
 - [x] Add database constraints for status fields and fit score range where practical.
 - [x] Keep immutable repeated fit history and deterministically select the newest result per resume.
-- [ ] Make tailored resume creation atomic or fully compensate every partial write.
+- [x] Make tailored resume creation atomic or fully compensate every partial write.
 
 ### Search profiles and sources
 
@@ -83,7 +83,7 @@ Priority meanings:
 - [x] Preserve every source resume row and original bullet exactly.
 - [x] Reuse the application record while creating explicit tailored resume versions.
 - [x] Add service tests proving source rows are unchanged after tailoring.
-- [x] Add failure-injection tests proving application/listing links are restored after tailoring failures.
+- [x] Submit resume, child rows, application link, and listing state as one Neon HTTP transaction.
 
 ### Real PDF download
 

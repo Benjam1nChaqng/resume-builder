@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildTailoredBulletCopies,
   buildTailoredBulletReplacements,
+  buildTailoredResumeRows,
   buildTailoredResumeTitle,
-  linkTailoredResumeWithCompensation,
+  executeTailoredWriteBatch,
 } from "./tailored-resume";
+import type { RenderableResume } from "@/lib/resumes/render";
 
 vi.mock("@/lib/db", () => ({ db: {} }));
 vi.mock("./access", () => ({ requireJobAccess: vi.fn() }));
@@ -114,125 +116,147 @@ describe("buildTailoredBulletCopies", () => {
   });
 });
 
-describe("linkTailoredResumeWithCompensation", () => {
-  function operations() {
-    return {
-      updateApplication: vi.fn(
-        async (id: string, resumeId: string | null, status: string) => {
-          void id;
-          void resumeId;
-          void status;
-        },
-      ),
-      insertApplication: vi.fn(
-        async (input: {
-          id: string;
-          userId: string;
-          jobId: string;
-          resumeId: string;
-          status: string;
-        }) => {
-          void input;
-        },
-      ),
-      deleteApplication: vi.fn(async (id: string) => {
-        void id;
-      }),
-      updateListingStatus: vi.fn(
-        async (id: string, status: string) => {
-          void id;
-          void status;
-        },
-      ),
-    };
-  }
-
-  it("preserves an applied application and applied listings", async () => {
-    const ops = operations();
-    await linkTailoredResumeWithCompensation({
-      existingApplication: {
-        id: "app-1",
-        resumeId: "resume-old",
-        status: "applied",
-      },
-      listings: [
-        { id: "listing-applied", status: "applied" },
-        { id: "listing-saved", status: "saved" },
-      ],
-      applicationId: "unused",
+describe("buildTailoredResumeRows", () => {
+  it("copies every section, changes only accepted text, and leaves the source untouched", () => {
+    const source = {
+      id: "resume-source",
       userId: "user-1",
-      jobId: "job-1",
-      resumeId: "resume-new",
-      operations: ops,
-    });
-
-    expect(ops.updateApplication).toHaveBeenCalledWith(
-      "app-1",
-      "resume-new",
-      "applied",
-    );
-    expect(ops.updateListingStatus).toHaveBeenCalledOnce();
-    expect(ops.updateListingStatus).toHaveBeenCalledWith(
-      "listing-saved",
-      "tailored",
-    );
-  });
-
-  it("restores existing links when a later listing update fails", async () => {
-    const ops = operations();
-    ops.updateListingStatus.mockImplementation(async (id, status) => {
-      if (id === "listing-2" && status === "tailored") {
-        throw new Error("listing update failed");
-      }
-    });
-
-    await expect(
-      linkTailoredResumeWithCompensation({
-        existingApplication: {
-          id: "app-1",
-          resumeId: "resume-old",
-          status: "draft",
+      title: "Maya Resume",
+      isDefault: true,
+      sourcePdfUrl: "https://files.example/resume.pdf",
+      createdAt: new Date("2026-01-01T00:00:00Z"),
+      updatedAt: new Date("2026-01-02T00:00:00Z"),
+      contactInfo: {
+        resumeId: "resume-source",
+        fullName: "Maya Rivera",
+        email: "maya@example.com",
+        phone: "555-0100",
+        location: "Los Angeles, CA",
+        links: [{ label: "Portfolio", url: "https://maya.example" }],
+      },
+      experiences: [
+        {
+          id: "experience-source",
+          resumeId: "resume-source",
+          company: "Corner Cafe",
+          role: "Barista",
+          location: "Los Angeles, CA",
+          startDate: "2025-01-01",
+          endDate: null,
+          current: true,
+          sortOrder: 0,
+          bullets: [
+            {
+              id: "bullet-1",
+              experienceId: "experience-source",
+              text: "Served customers",
+              originalText: null,
+              sortOrder: 0,
+            },
+            {
+              id: "bullet-2",
+              experienceId: "experience-source",
+              text: "Trained new hires",
+              originalText: "Helped new hires",
+              sortOrder: 1,
+            },
+          ],
         },
-        listings: [
-          { id: "listing-1", status: "discovered" },
-          { id: "listing-2", status: "saved" },
-        ],
-        applicationId: "unused",
-        userId: "user-1",
-        jobId: "job-1",
-        resumeId: "resume-new",
-        operations: ops,
-      }),
-    ).rejects.toThrow(/listing update failed/);
+      ],
+      educations: [
+        {
+          id: "education-source",
+          resumeId: "resume-source",
+          school: "City College",
+          degree: "AA",
+          field: "Business",
+          startDate: "2022-01-01",
+          endDate: "2024-01-01",
+          gpa: "3.80",
+          sortOrder: 0,
+        },
+      ],
+      skills: [
+        {
+          id: "skill-source",
+          resumeId: "resume-source",
+          category: "Service",
+          name: "POS systems",
+          sortOrder: 0,
+        },
+      ],
+      projects: [
+        {
+          id: "project-source",
+          resumeId: "resume-source",
+          name: "Community pantry",
+          description: "Coordinated weekly inventory",
+          link: null,
+          sortOrder: 0,
+        },
+      ],
+    } satisfies RenderableResume;
+    const before = structuredClone(source);
+    let nextId = 0;
 
-    expect(ops.updateApplication).toHaveBeenNthCalledWith(
-      2,
-      "app-1",
-      "resume-old",
-      "draft",
-    );
-    expect(ops.updateListingStatus).toHaveBeenCalledWith(
-      "listing-1",
-      "discovered",
-    );
+    const rows = buildTailoredResumeRows({
+      source,
+      userId: "user-1",
+      company: "Acme",
+      role: "Office Assistant",
+      replacements: new Map([["bullet-2", "Onboarded five new hires"]]),
+      idFactory: () => `new-${++nextId}`,
+    });
+
+    expect(rows.resumeRow).toMatchObject({
+      id: "new-1",
+      userId: "user-1",
+      title: "Maya Resume - Acme Office Assistant",
+      isDefault: false,
+      sourcePdfUrl: "https://files.example/resume.pdf",
+    });
+    expect(rows.contactInfoRow).toMatchObject({
+      resumeId: "new-1",
+      fullName: "Maya Rivera",
+    });
+    expect(rows.experienceRows).toEqual([
+      expect.objectContaining({
+        id: "new-2",
+        resumeId: "new-1",
+        company: "Corner Cafe",
+      }),
+    ]);
+    expect(rows.bulletRows).toEqual([
+      expect.objectContaining({
+        id: "new-3",
+        text: "Served customers",
+        originalText: "Served customers",
+      }),
+      expect.objectContaining({
+        id: "new-4",
+        text: "Onboarded five new hires",
+        originalText: "Helped new hires",
+      }),
+    ]);
+    expect(rows.educationRows[0]).toMatchObject({ id: "new-5", resumeId: "new-1" });
+    expect(rows.skillRows[0]).toMatchObject({ id: "new-6", resumeId: "new-1" });
+    expect(rows.projectRows[0]).toMatchObject({ id: "new-7", resumeId: "new-1" });
+    expect(source).toEqual(before);
   });
+});
 
-  it("deletes a newly created application when linking fails", async () => {
-    const ops = operations();
-    ops.updateListingStatus.mockRejectedValueOnce(new Error("listing failed"));
+describe("executeTailoredWriteBatch", () => {
+  it("submits all writes once and propagates transaction failure without fallback writes", async () => {
+    const writes = [{ table: "resume" }, { table: "application" }] as [
+      { table: string },
+      ...Array<{ table: string }>,
+    ];
+    const execute = vi.fn().mockRejectedValue(new Error("batch rolled back"));
 
-    await expect(
-      linkTailoredResumeWithCompensation({
-        existingApplication: null,
-        listings: [{ id: "listing-1", status: "saved" }],
-        applicationId: "app-new",
-        userId: "user-1",
-        jobId: "job-1",
-        resumeId: "resume-new",
-        operations: ops,
-      }),
-    ).rejects.toThrow(/listing failed/);
-
-    expect(ops.deleteApplication).toHaveBeenCalledWith("app-new");
+    await expect(executeTailoredWriteBatch(writes, execute)).rejects.toThrow(
+      /batch rolled back/,
+    );
+    expect(execute).toHaveBeenCalledOnce();
+    expect(execute).toHaveBeenCalledWith(writes);
   });
 });

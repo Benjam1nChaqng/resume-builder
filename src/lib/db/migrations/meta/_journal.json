@@ -71,6 +71,13 @@
       "when": 1786477840918,
       "tag": "0009_majestic_skin",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786479326100,
+      "tag": "0010_volatile_gorilla_man",
+      "breakpoints": true
     }
   ]
 }
