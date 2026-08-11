@@ -5,6 +5,7 @@ const mockCreateJobForUser = vi.fn();
 const mockTailorResumeForJob = vi.fn();
 const mockSaveDiscoveredListing = vi.fn();
 const mockCreateTailoredResumeCopy = vi.fn();
+const mockMarkJobApplied = vi.fn();
 const mockRedirect = vi.fn((url: string) => {
   const err = new Error(`REDIRECT:${url}`);
   // Tag like Next.js redirect throws (the test only needs to verify the redirect path).
@@ -29,6 +30,10 @@ vi.mock("@/lib/jobs/create", () => ({
 
 vi.mock("@/lib/jobs/tailor", () => ({
   tailorResumeForJob: mockTailorResumeForJob,
+}));
+
+vi.mock("@/lib/jobs/application-state", () => ({
+  markJobApplied: mockMarkJobApplied,
 }));
 
 vi.mock("@/lib/jobs/discovery", () => ({
@@ -68,6 +73,7 @@ beforeEach(() => {
   mockTailorResumeForJob.mockReset();
   mockSaveDiscoveredListing.mockReset();
   mockCreateTailoredResumeCopy.mockReset();
+  mockMarkJobApplied.mockReset();
   mockRedirect.mockClear();
 });
 
@@ -166,5 +172,17 @@ describe("createTailoredResumeCopyAction", () => {
       resumeId: "resume-1",
       acceptedChanges,
     });
+  });
+});
+
+describe("markJobAppliedAction", () => {
+  it("updates application state before returning to the job", async () => {
+    mockMarkJobApplied.mockResolvedValueOnce(undefined);
+
+    const { markJobAppliedAction } = await import("./jobs");
+    await expect(markJobAppliedAction("job-1")).rejects.toThrow(
+      /REDIRECT:\/job\/job-1/,
+    );
+    expect(mockMarkJobApplied).toHaveBeenCalledWith({ jobId: "job-1" });
   });
 });

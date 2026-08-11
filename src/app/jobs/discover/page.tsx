@@ -24,14 +24,34 @@ import { selectActiveProfile } from "@/lib/jobs/profile-selection";
 export default async function JobDiscoverPage({
   searchParams,
 }: {
-  searchParams: Promise<{ profile?: string }>;
+  searchParams: Promise<{ profile?: string; status?: string }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
 
   const profiles = await listDiscoveryData(session.user.id);
-  const { profile: requestedProfileId } = await searchParams;
+  const {
+    profile: requestedProfileId,
+    status: requestedStatus,
+  } = await searchParams;
   const activeProfile = selectActiveProfile(profiles, requestedProfileId);
+  const listingStatuses = [
+    "all",
+    "discovered",
+    "saved",
+    "rejected",
+    "tailored",
+    "applied",
+  ] as const;
+  const statusFilter = listingStatuses.includes(
+    requestedStatus as (typeof listingStatuses)[number],
+  )
+    ? (requestedStatus as (typeof listingStatuses)[number])
+    : "all";
+  const visibleListings =
+    activeProfile && statusFilter !== "all"
+      ? activeProfile.listings.filter((listing) => listing.status === statusFilter)
+      : (activeProfile?.listings ?? []);
 
   return (
     <main className="min-h-screen bg-white px-6 py-12 dark:bg-neutral-950">
@@ -228,13 +248,45 @@ export default async function JobDiscoverPage({
                         </div>
                       </form>
                     </details>
+                    <nav
+                      aria-label="Listing status"
+                      className="mt-4 flex gap-1 overflow-x-auto border-b border-neutral-200 pb-2 dark:border-neutral-800"
+                    >
+                      {listingStatuses.map((status) => {
+                        const count =
+                          status === "all"
+                            ? activeProfile.listings.length
+                            : activeProfile.listings.filter(
+                                (listing) => listing.status === status,
+                              ).length;
+                        return (
+                          <Link
+                            key={status}
+                            href={
+                              "/jobs/discover?profile=" +
+                              encodeURIComponent(activeProfile.id) +
+                              "&status=" +
+                              status
+                            }
+                            className={`shrink-0 rounded-md px-2 py-1 text-xs capitalize ${
+                              statusFilter === status
+                                ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
+                                : "text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                            }`}
+                          >
+                            {status} ({count})
+                          </Link>
+                        );
+                      })}
+                    </nav>
                     <ul className="mt-4 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
-                      {activeProfile.listings.length === 0 && (
+                      {visibleListings.length === 0 && (
                         <li className="py-10 text-center text-sm text-neutral-500">
-                          No listings yet. Add a source and run discovery.
+                          No {statusFilter === "all" ? "" : statusFilter + " "}
+                          listings yet.
                         </li>
                       )}
-                      {activeProfile.listings.map((listing) => (
+                      {visibleListings.map((listing) => (
                         <li
                           key={listing.id}
                           className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
@@ -261,10 +313,19 @@ export default async function JobDiscoverPage({
                                 .join(" | ")}
                             </p>
                           </div>
-                          {listing.status === "discovered" ? (
+                          {listing.status === "discovered" ||
+                          listing.status === "rejected" ? (
                             <DiscoveredListingActions
                               listingId={listing.id}
+                              status={listing.status}
                             />
+                          ) : listing.jobId ? (
+                            <Link
+                              href={`/job/${listing.jobId}`}
+                              className="text-xs font-medium underline underline-offset-4"
+                            >
+                              Open job
+                            </Link>
                           ) : (
                             <span className="text-xs uppercase tracking-wide text-neutral-400">
                               {listing.status}

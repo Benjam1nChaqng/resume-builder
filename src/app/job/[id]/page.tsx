@@ -8,6 +8,7 @@ import { application, job, resumeJobFit } from "@/lib/db/jobs-schema";
 import { resume } from "@/lib/db/resume-schema";
 import { JobTailorPanel } from "@/components/job-tailor-panel";
 import {
+  markJobAppliedAction,
   runResumeJobFitAction,
 } from "@/app/actions/jobs";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
@@ -64,10 +65,20 @@ export default async function JobPage({
       )
       .orderBy(desc(resumeJobFit.createdAt)),
     db
-      .select({ resumeId: application.resumeId, status: application.status })
+      .select({
+        resumeId: application.resumeId,
+        status: application.status,
+        appliedAt: application.appliedAt,
+      })
       .from(application)
-      .where(eq(application.jobId, jd.id)),
+      .where(
+        and(
+          eq(application.jobId, jd.id),
+          eq(application.userId, session.user.id),
+        ),
+      ),
   ]);
+  const applicationRecord = applications[0] ?? null;
   const tailoredResumeId = applications.find((a) => a.resumeId)?.resumeId ?? null;
   const activeResumeId = resumes.some((resumeRow) => resumeRow.id === requestedResumeId)
     ? requestedResumeId!
@@ -209,6 +220,30 @@ export default async function JobPage({
               </Link>
             </div>
           )}
+
+          <div className="mt-4 flex items-center gap-3">
+            {applicationRecord?.status === "applied" ? (
+              <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                Applied {applicationRecord.appliedAt.toLocaleDateString()}
+              </p>
+            ) : (
+              <form
+                action={async () => {
+                  "use server";
+                  await markJobAppliedAction(jd.id);
+                }}
+              >
+                <PendingSubmitButton
+                  type="submit"
+                  variant="outline"
+                  size="sm"
+                  pendingLabel="Saving..."
+                >
+                  Mark applied
+                </PendingSubmitButton>
+              </form>
+            )}
+          </div>
 
           {activeFit && (
             <div className="mt-6 rounded-lg border border-neutral-200 p-5 dark:border-neutral-800">

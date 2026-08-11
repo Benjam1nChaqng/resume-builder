@@ -227,7 +227,7 @@ export async function updateListingStatusForUser({
 }: {
   userId: string;
   listingId: string;
-  status: "saved" | "rejected" | "tailored" | "applied";
+  status: "discovered" | "saved" | "rejected" | "tailored" | "applied";
   jobId?: string;
 }): Promise<string> {
   const rows = await db

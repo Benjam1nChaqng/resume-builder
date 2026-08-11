@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { createJobForUser } from "@/lib/jobs/create";
+import { markJobApplied } from "@/lib/jobs/application-state";
 import {
   JobSearchProfileInputSchema,
   JobSourceInputSchema,
@@ -190,6 +191,18 @@ export async function rejectDiscoveredListingAction(
   redirect(`/jobs/discover?profile=${profileId}`);
 }
 
+export async function restoreDiscoveredListingAction(
+  listingId: string,
+): Promise<void> {
+  const userId = await requireSessionUserId();
+  const profileId = await updateListingStatusForUser({
+    userId,
+    listingId,
+    status: "discovered",
+  });
+  redirect(`/jobs/discover?profile=${profileId}&status=rejected`);
+}
+
 export async function runResumeJobFitAction(
   jobId: string,
   resumeId: string,
@@ -204,4 +217,9 @@ export async function createTailoredResumeCopyAction(
   acceptedChanges: TailoredBulletChange[],
 ): Promise<string> {
   return createTailoredResumeCopy({ jobId, resumeId, acceptedChanges });
+}
+
+export async function markJobAppliedAction(jobId: string): Promise<void> {
+  await markJobApplied({ jobId });
+  redirect(`/job/${jobId}`);
 }

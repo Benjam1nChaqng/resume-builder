@@ -56,13 +56,15 @@ Priority meanings:
 
 ### Listing review and jobs
 
-- [ ] Add discovered-listing filters, sorting, pagination, and profile scoping.
-- [ ] Allow rejected listings to be restored.
+- [x] Add discovered-listing status filters and explicit profile scoping.
+- [ ] Add listing sorting and pagination for large result sets.
+- [x] Allow rejected listings to be restored.
 - [x] Prevent saving a listing URL supplied independently of the authorized listing row.
 - [x] Convert a saved listing into one structured `job` record idempotently.
 - [ ] Preserve the discovery source and listing link on the structured job.
 - [x] Move listing status to tailored when a tailored resume is created.
-- [ ] Add an applied action with application date and optional notes.
+- [x] Add an applied action with application date.
+- [ ] Add optional application notes.
 - [ ] Show the full listing/application state history on the job page.
 - [ ] Add integration tests for duplicate discovery and every state transition.
 
@@ -94,7 +96,7 @@ Priority meanings:
 
 ### End-to-end user experience
 
-- [ ] Add pending states that prevent duplicate profile, source, discovery, fit, and tailor submissions.
+- [x] Add pending states that prevent duplicate profile, source, discovery, fit, and tailor submissions.
 - [ ] Add useful empty states for no profile, no source, no listing, no resume, and no fit result.
 - [ ] Add field-level validation messages instead of uncaught server-action errors.
 - [ ] Add success feedback after discovery, save, reject, fit, tailor, and download actions.
