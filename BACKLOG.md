@@ -104,8 +104,8 @@ Priority meanings:
 - [ ] Add success feedback after discovery, save, reject, fit, tailor, and download actions.
 - [ ] Make profile/source management usable on mobile and desktop.
 - [ ] Verify import resume to discover job to fit check to tailored copy to PDF in a real browser.
-- [ ] Run `pnpm typecheck`, `pnpm lint`, `pnpm test:run`, and `pnpm build` cleanly.
-- [ ] Update the changelog and commit each logical unit.
+- [x] Run `pnpm typecheck`, `pnpm lint`, `pnpm test:run`, and `pnpm build` cleanly.
+- [x] Update the changelog and commit each logical unit.
 - [ ] Push the verified branch and smoke-test the production deployment when authorized.
 
 ## P1: Dependable Private Beta

@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-11: Verified the complete local code gate with strict typecheck, ESLint, 111 Vitest tests, and a successful production Next build.
 - 2026-08-11: Added a deterministic fit baseline, versioned fit rubric metadata, source-section/confidence evidence, and model disagreement warnings.
 - 2026-08-11: Added public Ashby board discovery with listed-only jobs, compensation, employment type, posted dates, remote normalization, richer Greenhouse/Lever metadata, and migration `0006`.
 - 2026-08-11: Added profile-scoped listing status filters, rejected-listing restore, structured-job links, and synchronized applied application/listing state.
