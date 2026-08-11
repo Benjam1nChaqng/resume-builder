@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -13,18 +14,29 @@ import { DeleteJobSearchProfileButton } from "@/components/delete-job-search-pro
 import { DiscoveredListingActions } from "@/components/discovered-listing-actions";
 import { JobSearchProfileSelector } from "@/components/job-search-profile-selector";
 import { JobSearchProfileCreateForm } from "@/components/job-search-profile-create-form";
+import { JobListingSortSelect } from "@/components/job-listing-sort-select";
 import { JobSourceActions } from "@/components/job-source-actions";
 import { JobSourceCreateForm } from "@/components/job-source-create-form";
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { selectActiveProfile } from "@/lib/jobs/profile-selection";
+import {
+  createJobListingView,
+  parseJobListingSort,
+} from "@/lib/jobs/listing-view";
 
 export default async function JobDiscoverPage({
   searchParams,
 }: {
-  searchParams: Promise<{ profile?: string; status?: string }>;
+  searchParams: Promise<{
+    profile?: string;
+    status?: string;
+    sort?: string;
+    page?: string;
+  }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
@@ -33,6 +45,8 @@ export default async function JobDiscoverPage({
   const {
     profile: requestedProfileId,
     status: requestedStatus,
+    sort: requestedSort,
+    page: requestedPage,
   } = await searchParams;
   const activeProfile = selectActiveProfile(profiles, requestedProfileId);
   const listingStatuses = [
@@ -48,10 +62,13 @@ export default async function JobDiscoverPage({
   )
     ? (requestedStatus as (typeof listingStatuses)[number])
     : "all";
-  const visibleListings =
-    activeProfile && statusFilter !== "all"
-      ? activeProfile.listings.filter((listing) => listing.status === statusFilter)
-      : (activeProfile?.listings ?? []);
+  const listingSort = parseJobListingSort(requestedSort);
+  const listingView = createJobListingView(activeProfile?.listings ?? [], {
+    status: statusFilter,
+    sort: listingSort,
+    page: Number(requestedPage),
+  });
+  const visibleListings = listingView.items;
 
   return (
     <main className="min-h-screen bg-white px-6 py-12 dark:bg-neutral-950">
@@ -227,7 +244,14 @@ export default async function JobDiscoverPage({
                         );
                       })}
                     </nav>
-                    <ul className="mt-4 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-xs text-neutral-500">
+                        Showing {listingView.rangeStart}-{listingView.rangeEnd} of{" "}
+                        {listingView.total}
+                      </p>
+                      <JobListingSortSelect value={listingSort} />
+                    </div>
+                    <ul className="mt-2 divide-y divide-neutral-200 border-y border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
                       {visibleListings.length === 0 && (
                         <li className="py-10 text-center text-sm text-neutral-500">
                           No {statusFilter === "all" ? "" : statusFilter + " "}
@@ -288,6 +312,74 @@ export default async function JobDiscoverPage({
                         </li>
                       ))}
                     </ul>
+                    {listingView.pageCount > 1 && (
+                      <nav
+                        aria-label="Listing pages"
+                        className="mt-4 flex items-center justify-center gap-3"
+                      >
+                        {listingView.hasPrevious ? (
+                          <Link
+                            href={listingPageHref({
+                              profileId: activeProfile.id,
+                              status: statusFilter,
+                              sort: listingSort,
+                              page: listingView.page - 1,
+                            })}
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "icon-sm",
+                            })}
+                            title="Previous page"
+                          >
+                            <ChevronLeft />
+                            <span className="sr-only">Previous page</span>
+                          </Link>
+                        ) : (
+                          <span
+                            aria-hidden="true"
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "icon-sm",
+                              className: "pointer-events-none opacity-40",
+                            })}
+                          >
+                            <ChevronLeft />
+                          </span>
+                        )}
+                        <span className="min-w-20 text-center text-xs text-neutral-500">
+                          Page {listingView.page} of {listingView.pageCount}
+                        </span>
+                        {listingView.hasNext ? (
+                          <Link
+                            href={listingPageHref({
+                              profileId: activeProfile.id,
+                              status: statusFilter,
+                              sort: listingSort,
+                              page: listingView.page + 1,
+                            })}
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "icon-sm",
+                            })}
+                            title="Next page"
+                          >
+                            <ChevronRight />
+                            <span className="sr-only">Next page</span>
+                          </Link>
+                        ) : (
+                          <span
+                            aria-hidden="true"
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "icon-sm",
+                              className: "pointer-events-none opacity-40",
+                            })}
+                          >
+                            <ChevronRight />
+                          </span>
+                        )}
+                      </nav>
+                    )}
                   </CardContent>
                 </Card>
             ) : null}
@@ -296,6 +388,26 @@ export default async function JobDiscoverPage({
       </div>
     </main>
   );
+}
+
+function listingPageHref({
+  profileId,
+  status,
+  sort,
+  page,
+}: {
+  profileId: string;
+  status: string;
+  sort: string;
+  page: number;
+}) {
+  const params = new URLSearchParams({
+    profile: profileId,
+    status,
+    sort,
+    page: String(page),
+  });
+  return `/jobs/discover?${params.toString()}`;
 }
 
 function Field({

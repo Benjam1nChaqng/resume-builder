@@ -59,7 +59,7 @@ Priority meanings:
 ### Listing review and jobs
 
 - [x] Add discovered-listing status filters and explicit profile scoping.
-- [ ] Add listing sorting and pagination for large result sets.
+- [x] Add listing sorting and pagination for large result sets.
 - [x] Allow rejected listings to be restored.
 - [x] Prevent saving a listing URL supplied independently of the authorized listing row.
 - [x] Convert a saved listing into one structured `job` record idempotently.
