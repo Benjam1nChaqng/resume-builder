@@ -143,6 +143,27 @@ export async function updateListingStatusForUser({
     .where(eq(jobListing.id, listingId));
 }
 
+export async function getDiscoveredListingForUser({
+  userId,
+  listingId,
+}: {
+  userId: string;
+  listingId: string;
+}) {
+  const rows = await db
+    .select({
+      id: jobListing.id,
+      canonicalUrl: jobListing.canonicalUrl,
+      jobId: jobListing.jobId,
+      status: jobListing.status,
+    })
+    .from(jobListing)
+    .innerJoin(jobSearchProfile, eq(jobListing.profileId, jobSearchProfile.id))
+    .where(and(eq(jobListing.id, listingId), eq(jobSearchProfile.userId, userId)))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 export async function getRecentProfiles(userId: string) {
   return db
     .select({

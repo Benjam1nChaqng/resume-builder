@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockGetSession = vi.fn();
 const mockCreateJobForUser = vi.fn();
 const mockTailorResumeForJob = vi.fn();
+const mockSaveDiscoveredListing = vi.fn();
 const mockRedirect = vi.fn((url: string) => {
   const err = new Error(`REDIRECT:${url}`);
   // Tag like Next.js redirect throws (the test only needs to verify the redirect path).
@@ -48,6 +49,10 @@ vi.mock("@/lib/jobs/run-discovery", () => ({
   runJobDiscovery: vi.fn(),
 }));
 
+vi.mock("@/lib/jobs/save-listing", () => ({
+  saveDiscoveredListingForUser: mockSaveDiscoveredListing,
+}));
+
 vi.mock("@/lib/jobs/tailored-resume", () => ({
   createTailoredResumeCopy: vi.fn(),
 }));
@@ -56,6 +61,7 @@ beforeEach(() => {
   mockGetSession.mockReset();
   mockCreateJobForUser.mockReset();
   mockTailorResumeForJob.mockReset();
+  mockSaveDiscoveredListing.mockReset();
   mockRedirect.mockClear();
 });
 
@@ -113,6 +119,23 @@ describe("tailorResumeForJobAction", () => {
     expect(mockTailorResumeForJob).toHaveBeenCalledWith({
       jobId: "job-1",
       resumeId: "resume-1",
+    });
+  });
+});
+
+describe("saveDiscoveredListingAction", () => {
+  it("saves by owned listing id without accepting a browser-supplied URL", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    mockSaveDiscoveredListing.mockResolvedValueOnce("job-1");
+
+    const { saveDiscoveredListingAction } = await import("./jobs");
+    await expect(saveDiscoveredListingAction("listing-1")).rejects.toThrow(
+      /REDIRECT:\/job\/job-1/,
+    );
+
+    expect(mockSaveDiscoveredListing).toHaveBeenCalledWith({
+      userId: "user-1",
+      listingId: "listing-1",
     });
   });
 });

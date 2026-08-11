@@ -15,6 +15,7 @@ import {
 } from "@/lib/jobs/discovery-repo";
 import { runResumeJobFit } from "@/lib/jobs/fit";
 import { runJobDiscovery } from "@/lib/jobs/run-discovery";
+import { saveDiscoveredListingForUser } from "@/lib/jobs/save-listing";
 import { createTailoredResumeCopy } from "@/lib/jobs/tailored-resume";
 import {
   tailorResumeForJob,
@@ -117,11 +118,9 @@ export async function runJobDiscoveryAction(formData: FormData): Promise<void> {
 
 export async function saveDiscoveredListingAction(
   listingId: string,
-  url: string,
 ): Promise<void> {
   const userId = await requireSessionUserId();
-  const jobId = await createJobForUser({ userId, url });
-  await updateListingStatusForUser({ userId, listingId, status: "saved", jobId });
+  const jobId = await saveDiscoveredListingForUser({ userId, listingId });
   redirect(`/job/${jobId}`);
 }
 

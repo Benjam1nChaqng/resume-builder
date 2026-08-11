@@ -56,8 +56,8 @@ Priority meanings:
 
 - [ ] Add discovered-listing filters, sorting, pagination, and profile scoping.
 - [ ] Allow rejected listings to be restored.
-- [ ] Prevent saving a listing URL supplied independently of the authorized listing row.
-- [ ] Convert a saved listing into one structured `job` record idempotently.
+- [x] Prevent saving a listing URL supplied independently of the authorized listing row.
+- [x] Convert a saved listing into one structured `job` record idempotently.
 - [ ] Preserve the discovery source and listing link on the structured job.
 - [ ] Move listing status to tailored when a tailored resume is created.
 - [ ] Add an applied action with application date and optional notes.

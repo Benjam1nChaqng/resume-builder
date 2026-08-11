@@ -9,10 +9,8 @@ import { Button } from "@/components/ui/button";
 
 export function DiscoveredListingActions({
   listingId,
-  url,
 }: {
   listingId: string;
-  url: string;
 }) {
   const [isPending, startTransition] = useTransition();
 
@@ -23,7 +21,7 @@ export function DiscoveredListingActions({
         size="sm"
         disabled={isPending}
         onClick={() =>
-          startTransition(() => saveDiscoveredListingAction(listingId, url))
+          startTransition(() => saveDiscoveredListingAction(listingId))
         }
       >
         Save
@@ -42,4 +40,3 @@ export function DiscoveredListingActions({
     </div>
   );
 }
-

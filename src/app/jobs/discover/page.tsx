@@ -171,7 +171,6 @@ export default async function JobDiscoverPage() {
                           {listing.status === "discovered" ? (
                             <DiscoveredListingActions
                               listingId={listing.id}
-                              url={listing.canonicalUrl}
                             />
                           ) : (
                             <span className="text-xs uppercase tracking-wide text-neutral-400">
