@@ -87,6 +87,9 @@ const TRACKING_PARAMS = new Set([
 
 export function canonicalizeJobUrl(rawUrl: string, baseUrl?: string): string {
   const url = new URL(rawUrl, baseUrl);
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error("Job links must use HTTP or HTTPS.");
+  }
   url.hash = "";
   for (const key of [...url.searchParams.keys()]) {
     if (TRACKING_PARAMS.has(key.toLowerCase())) {

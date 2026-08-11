@@ -15,6 +15,9 @@ describe("job discovery helpers", () => {
         "https://WWW.Example.com/jobs",
       ),
     ).toBe("https://www.example.com/careers/barista");
+    expect(() =>
+      canonicalizeJobUrl("javascript:alert('nope')", "https://example.com"),
+    ).toThrow(/HTTP or HTTPS/);
   });
 
   it("parses likely job links and dedupes by canonical URL", () => {

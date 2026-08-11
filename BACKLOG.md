@@ -53,7 +53,7 @@ Priority meanings:
 - [x] Record per-source results and partial failures for each discovery run.
 - [x] Show last-run status, duration, inserted count, and error summary.
 - [x] Add retry behavior for transient source failures without duplicating listings.
-- [ ] Add fixture tests for each supported parser and malformed HTML.
+- [x] Add fixture tests for each supported parser and malformed HTML.
 - [x] Add tests for redirects, timeouts, oversized responses, and blocked hosts.
 
 ### Listing review and jobs

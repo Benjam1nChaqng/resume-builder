@@ -1,0 +1,15 @@
+{
+  "jobs": [
+    {
+      "title": "Customer Support Associate",
+      "absolute_url": "https://job-boards.greenhouse.io/acme/jobs/123?gh_src=fixture",
+      "updated_at": "2026-08-01T12:00:00.000Z",
+      "location": { "name": "Remote - US" }
+    },
+    {
+      "title": "Warehouse Associate",
+      "absolute_url": "https://job-boards.greenhouse.io/acme/jobs/456",
+      "location": { "name": "Los Angeles, CA" }
+    }
+  ]
+}

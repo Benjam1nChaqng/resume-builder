@@ -1,0 +1,21 @@
+[
+  {
+    "text": "Operations Coordinator",
+    "hostedUrl": "https://jobs.lever.co/acme/abc?utm_source=fixture",
+    "categories": {
+      "location": "United States",
+      "commitment": "Full-time"
+    },
+    "workplaceType": "remote",
+    "createdAt": 1785585600000
+  },
+  {
+    "text": "Retail Associate",
+    "hostedUrl": "https://jobs.lever.co/acme/def",
+    "categories": {
+      "location": "Pasadena, CA",
+      "commitment": "Part-time"
+    },
+    "workplaceType": "onsite"
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "jobs": [
+    {
+      "title": "Customer Experience Associate",
+      "location": "United States",
+      "isListed": true,
+      "isRemote": true,
+      "employmentType": "FullTime",
+      "publishedAt": "2026-08-01T12:00:00.000Z",
+      "jobUrl": "https://jobs.ashbyhq.com/Acme/abc?utm_source=fixture",
+      "compensation": {
+        "scrapeableCompensationSalarySummary": "$50K - $60K"
+      }
+    },
+    {
+      "title": "Unlisted Role",
+      "location": "New York, NY",
+      "isListed": false,
+      "jobUrl": "https://jobs.ashbyhq.com/Acme/hidden"
+    }
+  ]
+}
