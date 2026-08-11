@@ -103,6 +103,38 @@ export function canonicalizeJobUrl(rawUrl: string, baseUrl?: string): string {
   return url.toString();
 }
 
+function normalizeFingerprintPart(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(incorporated|corporation|company|limited|inc|corp|llc|ltd|co)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function buildJobListingFingerprint({
+  company,
+  title,
+  location,
+}: {
+  company: string | null;
+  title: string;
+  location?: string | null;
+}): string | null {
+  if (!company) return null;
+  const normalizedCompany = normalizeFingerprintPart(company);
+  const normalizedTitle = normalizeFingerprintPart(title);
+  if (!normalizedCompany || !normalizedTitle) return null;
+  const normalizedLocation = location
+    ? normalizeFingerprintPart(location)
+    : "";
+  return [normalizedCompany, normalizedTitle, normalizedLocation]
+    .filter(Boolean)
+    .join("|");
+}
+
 function decodeHtml(text: string): string {
   return text
     .replace(/&amp;/g, "&")

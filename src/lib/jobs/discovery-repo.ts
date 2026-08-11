@@ -14,6 +14,7 @@ import type {
   JobSourceInput,
 } from "./discovery";
 import { JobSearchProfileInputSchema } from "./discovery";
+import { buildJobListingFingerprint } from "./discovery";
 import { assertPublicHttpUrl } from "./public-web";
 
 export async function createJobSearchProfile(
@@ -208,6 +209,7 @@ export async function upsertDiscoveredListings({
         profileId,
         sourceId,
         canonicalUrl: listing.canonicalUrl,
+        fingerprint: buildJobListingFingerprint(listing),
         title: listing.title,
         company: listing.company,
         location: listing.location,

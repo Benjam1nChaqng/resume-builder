@@ -57,6 +57,13 @@
       "when": 1786476768015,
       "tag": "0007_tired_iron_monger",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786477260096,
+      "tag": "0008_hot_banshee",
+      "breakpoints": true
     }
   ]
 }

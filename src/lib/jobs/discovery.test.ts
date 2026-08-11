@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   JobSourceInputSchema,
   JobSearchProfileInputSchema,
+  buildJobListingFingerprint,
   canonicalizeJobUrl,
   parseJobListingsFromHtml,
 } from "./discovery";
@@ -31,6 +32,42 @@ describe("job discovery helpers", () => {
       "Office Assistant",
       "Warehouse Associate",
     ]);
+  });
+
+  it("normalizes employer and title fingerprints for cross-link dedupe", () => {
+    expect(
+      buildJobListingFingerprint({
+        company: "Acme, Inc.",
+        title: "Office Assistant (Part-Time)",
+        location: "Los Angeles, CA",
+      }),
+    ).toBe("acme|office assistant part time|los angeles ca");
+    expect(
+      buildJobListingFingerprint({
+        company: "ACME Company",
+        title: "Office Assistant - Part Time",
+        location: "Los Angeles CA",
+      }),
+    ).toBe("acme|office assistant part time|los angeles ca");
+    expect(
+      buildJobListingFingerprint({
+        company: null,
+        title: "Office Assistant",
+      }),
+    ).toBeNull();
+    expect(
+      buildJobListingFingerprint({
+        company: "Acme",
+        title: "Office Assistant",
+        location: "Seattle, WA",
+      }),
+    ).not.toBe(
+      buildJobListingFingerprint({
+        company: "Acme",
+        title: "Office Assistant",
+        location: "Portland, OR",
+      }),
+    );
   });
 
   it("extracts JobPosting JSON-LD and dedupes it against matching links", () => {

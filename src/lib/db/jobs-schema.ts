@@ -205,6 +205,7 @@ export const jobListing = pgTable(
     }),
     jobId: text("job_id").references(() => job.id, { onDelete: "set null" }),
     canonicalUrl: text("canonical_url").notNull(),
+    fingerprint: text("fingerprint"),
     title: text("title").notNull(),
     company: text("company"),
     location: text("location"),
@@ -222,6 +223,10 @@ export const jobListing = pgTable(
     uniqueIndex("job_listing_profile_url_unique").on(
       table.profileId,
       table.canonicalUrl,
+    ),
+    uniqueIndex("job_listing_profile_fingerprint_unique").on(
+      table.profileId,
+      table.fingerprint,
     ),
     check(
       "job_listing_status_check",

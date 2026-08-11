@@ -47,7 +47,7 @@ Priority meanings:
 - [x] Extract location, employment type, compensation, and posted date when available.
 - [ ] Resolve company names from trusted source metadata when ATS feeds omit them.
 - [x] Apply exclusions, remote, and basic-job filters, then rank by target roles, keywords, and location.
-- [ ] Deduplicate by canonical URL and normalized company/title fingerprint.
+- [x] Deduplicate by canonical URL and normalized company/title/location fingerprint.
 - [x] Return the number of rows actually inserted, not the number attempted.
 - [x] Run independent source fetches with bounded concurrency.
 - [x] Record per-source results and partial failures for each discovery run.
@@ -63,7 +63,7 @@ Priority meanings:
 - [x] Allow rejected listings to be restored.
 - [x] Prevent saving a listing URL supplied independently of the authorized listing row.
 - [x] Convert a saved listing into one structured `job` record idempotently.
-- [ ] Preserve the discovery source and listing link on the structured job.
+- [x] Preserve the discovery source row and canonical listing link on the structured job.
 - [x] Move listing status to tailored when a tailored resume is created.
 - [x] Add an applied action with application date.
 - [ ] Add optional application notes.
