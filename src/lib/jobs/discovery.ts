@@ -71,6 +71,7 @@ export type DiscoveredListing = {
   title: string;
   company: string | null;
   location: string | null;
+  matchScore?: number;
 };
 
 const TRACKING_PARAMS = new Set([

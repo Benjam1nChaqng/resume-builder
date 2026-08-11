@@ -1,0 +1,1 @@
+ALTER TABLE "job_listing" ADD COLUMN "match_score" integer DEFAULT 0 NOT NULL;

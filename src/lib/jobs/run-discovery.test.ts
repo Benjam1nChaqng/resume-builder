@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockGetSources = vi.fn();
+const mockGetProfile = vi.fn();
 const mockCreateRun = vi.fn();
 const mockCompleteRun = vi.fn();
 const mockUpsertListings = vi.fn();
@@ -8,6 +9,7 @@ const mockDiscoverListings = vi.fn();
 
 vi.mock("./discovery-repo", () => ({
   getEnabledSourcesForProfile: mockGetSources,
+  getSearchProfileForDiscovery: mockGetProfile,
   createDiscoveryRun: mockCreateRun,
   completeDiscoveryRun: mockCompleteRun,
   upsertDiscoveredListings: mockUpsertListings,
@@ -19,10 +21,30 @@ vi.mock("./source-adapters", () => ({
 
 beforeEach(() => {
   mockGetSources.mockReset();
+  mockGetProfile.mockReset();
   mockCreateRun.mockReset();
   mockCompleteRun.mockReset();
   mockUpsertListings.mockReset();
   mockDiscoverListings.mockReset();
+  mockGetProfile.mockResolvedValue({
+    candidateName: "Maya",
+    targetRoles: ["warehouse associate"],
+    locationPreference: null,
+    remotePreference: "any",
+    experienceLevel: "entry level",
+    keywords: [],
+    exclusions: [],
+    basicJobFilters: {
+      partTime: false,
+      hourly: false,
+      entryLevel: false,
+      retail: false,
+      admin: false,
+      service: false,
+      warehouse: false,
+      internship: false,
+    },
+  });
 });
 
 describe("runJobDiscovery", () => {

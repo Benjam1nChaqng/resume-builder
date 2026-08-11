@@ -44,10 +44,10 @@ Priority meanings:
 - [x] Add dedicated adapters for public Greenhouse and global/EU Lever job boards.
 - [ ] Add dedicated adapters for Ashby and Workday search pages.
 - [ ] Extract company, location, employment type, compensation, and posted date when available.
-- [ ] Apply profile target roles, keywords, exclusions, location, remote, and basic-job filters.
+- [x] Apply exclusions, remote, and basic-job filters, then rank by target roles, keywords, and location.
 - [ ] Deduplicate by canonical URL and normalized company/title fingerprint.
 - [x] Return the number of rows actually inserted, not the number attempted.
-- [ ] Run independent source fetches with bounded concurrency.
+- [x] Run independent source fetches with bounded concurrency.
 - [ ] Record per-source results and partial failures for each discovery run.
 - [ ] Show last-run status, duration, inserted count, and error summary.
 - [ ] Add retry behavior for transient source failures without duplicating listings.

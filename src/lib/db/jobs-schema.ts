@@ -168,6 +168,7 @@ export const jobListing = pgTable(
     title: text("title").notNull(),
     company: text("company"),
     location: text("location"),
+    matchScore: integer("match_score").default(0).notNull(),
     status: text("status").default("discovered").notNull(),
     discoveredAt: timestamp("discovered_at", { withTimezone: true })
       .defaultNow()

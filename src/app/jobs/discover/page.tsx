@@ -246,7 +246,14 @@ export default async function JobDiscoverPage({
                               {listing.title}
                             </a>
                             <p className="mt-1 text-xs text-neutral-500">
-                              {[listing.company, listing.location, listing.status]
+                              {[
+                                listing.company,
+                                listing.location,
+                                listing.matchScore > 0
+                                  ? `${listing.matchScore}% profile match`
+                                  : null,
+                                listing.status,
+                              ]
                                 .filter(Boolean)
                                 .join(" | ")}
                             </p>

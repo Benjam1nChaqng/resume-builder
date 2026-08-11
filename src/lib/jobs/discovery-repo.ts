@@ -12,6 +12,7 @@ import type {
   JobSearchProfileInput,
   JobSourceInput,
 } from "./discovery";
+import { JobSearchProfileInputSchema } from "./discovery";
 import { assertPublicHttpUrl } from "./public-web";
 
 export async function createJobSearchProfile(
@@ -116,7 +117,10 @@ export async function listDiscoveryData(userId: string) {
     with: {
       sources: true,
       listings: {
-        orderBy: (cols, { desc }) => [desc(cols.discoveredAt)],
+        orderBy: (cols, { desc }) => [
+          desc(cols.matchScore),
+          desc(cols.discoveredAt),
+        ],
       },
     },
   });
@@ -132,6 +136,29 @@ export async function getEnabledSourcesForProfile(
     .select()
     .from(jobSource)
     .where(and(eq(jobSource.profileId, profileId), eq(jobSource.enabled, true)));
+}
+
+export async function getSearchProfileForDiscovery(
+  profileId: string,
+  userId: string,
+): Promise<JobSearchProfileInput> {
+  const rows = await db
+    .select({
+      candidateName: jobSearchProfile.candidateName,
+      targetRoles: jobSearchProfile.targetRoles,
+      locationPreference: jobSearchProfile.locationPreference,
+      remotePreference: jobSearchProfile.remotePreference,
+      experienceLevel: jobSearchProfile.experienceLevel,
+      keywords: jobSearchProfile.keywords,
+      exclusions: jobSearchProfile.exclusions,
+      basicJobFilters: jobSearchProfile.basicJobFilters,
+    })
+    .from(jobSearchProfile)
+    .where(and(eq(jobSearchProfile.id, profileId), eq(jobSearchProfile.userId, userId)))
+    .limit(1);
+  const profile = rows[0];
+  if (!profile) throw new Error("Job search profile not found.");
+  return JobSearchProfileInputSchema.parse(profile);
 }
 
 export async function createDiscoveryRun(profileId: string): Promise<string> {
@@ -171,6 +198,7 @@ export async function upsertDiscoveredListings({
         title: listing.title,
         company: listing.company,
         location: listing.location,
+        matchScore: listing.matchScore ?? 0,
       })),
     )
     .onConflictDoNothing()

@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-11: Added persisted discovery match scores, profile-aware filtering/ranking, three-source bounded concurrency, relevance-first listing display, and migration `0004`.
 - 2026-08-11: Added explicit friend/self search-profile selection, owned criteria updates and deletion, source pause/delete controls, duplicate-source detection, and pending-safe discovery forms.
 - 2026-08-11: Added protected Greenhouse and global/EU Lever discovery adapters with structured API parsing, filter preservation, malformed-response handling, and HTML fallback.
 - 2026-08-11: Added a prioritized product backlog and reusable Codex operator workflow for sustained, verified resume-builder development.

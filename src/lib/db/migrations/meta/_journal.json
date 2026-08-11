@@ -29,6 +29,13 @@
       "when": 1780084800000,
       "tag": "0003_job_discovery_pipeline",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1786474519625,
+      "tag": "0004_motionless_mauler",
+      "breakpoints": true
     }
   ]
 }
