@@ -6,6 +6,10 @@ import { auth } from "@/lib/auth";
 import { createJobForUser } from "@/lib/jobs/create";
 import { markJobApplied } from "@/lib/jobs/application-state";
 import {
+  ApplicationNotesSchema,
+  updateApplicationNotes,
+} from "@/lib/jobs/application-record";
+import {
   JobSearchProfileInputSchema,
   JobSourceInputSchema,
   JobSourceUpdateSchema,
@@ -46,6 +50,11 @@ export type JobDiscoveryFormState = {
   formError: string | null;
   values?: Record<string, string>;
   submitted?: boolean;
+};
+
+export type ApplicationNotesFormState = {
+  error: string | null;
+  saved: boolean;
 };
 
 const EMPTY_DISCOVERY_FORM_STATE: JobDiscoveryFormState = {
@@ -468,4 +477,17 @@ export async function createTailoredResumeCopyAction(
 export async function markJobAppliedAction(jobId: string): Promise<void> {
   await markJobApplied({ jobId });
   redirect(`/job/${jobId}?notice=applied`);
+}
+
+export async function updateApplicationNotesAction(
+  jobId: string,
+  _previousState: ApplicationNotesFormState,
+  formData: FormData,
+): Promise<ApplicationNotesFormState> {
+  const parsed = ApplicationNotesSchema.safeParse(formData.get("notes"));
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Check the notes.", saved: false };
+  }
+  await updateApplicationNotes({ jobId, notes: parsed.data });
+  return { error: null, saved: true };
 }

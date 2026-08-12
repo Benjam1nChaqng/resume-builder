@@ -15,6 +15,8 @@ import {
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ActionNotice } from "@/components/action-notice";
 import { ResumePdfDownloadLink } from "@/components/resume-pdf-download-link";
+import { ApplicationNotesForm } from "@/components/application-notes-form";
+import { getJobPipelineHistoryForUser } from "@/lib/jobs/application-record";
 
 type RouteParams = { id: string };
 
@@ -56,7 +58,7 @@ export default async function JobPage({
     .where(eq(resume.userId, session.user.id))
     .orderBy(desc(resume.updatedAt));
 
-  const [fits, applications] = await Promise.all([
+  const [fits, applications, pipelineHistory] = await Promise.all([
     db
       .select()
       .from(resumeJobFit)
@@ -71,6 +73,7 @@ export default async function JobPage({
       .select({
         resumeId: application.resumeId,
         status: application.status,
+        notes: application.notes,
         appliedAt: application.appliedAt,
       })
       .from(application)
@@ -80,6 +83,10 @@ export default async function JobPage({
           eq(application.userId, session.user.id),
         ),
       ),
+    getJobPipelineHistoryForUser({
+      jobId: jd.id,
+      userId: session.user.id,
+    }),
   ]);
   const latestFitsByResume = indexLatestFitsByResume(fits);
   const applicationRecord = applications[0] ?? null;
@@ -258,6 +265,39 @@ export default async function JobPage({
                 </PendingSubmitButton>
               </form>
             )}
+          </div>
+
+          <div className="mt-6 grid gap-6 border-t border-neutral-200 pt-6 dark:border-neutral-800 md:grid-cols-2">
+            <ApplicationNotesForm
+              jobId={jd.id}
+              notes={applicationRecord?.notes ?? null}
+            />
+            <div>
+              <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                Activity
+              </h3>
+              {pipelineHistory.length > 0 ? (
+                <ol className="mt-3 space-y-3 border-l border-neutral-200 pl-4 dark:border-neutral-800">
+                  {pipelineHistory.map((event) => (
+                    <li key={event.id} className="text-sm">
+                      <p className="font-medium capitalize text-neutral-800 dark:text-neutral-200">
+                        {event.restored ? "Restored to discovered" : event.status}
+                      </p>
+                      <time
+                        dateTime={event.occurredAt.toISOString()}
+                        className="text-xs text-neutral-500"
+                      >
+                        {event.occurredAt.toLocaleString()}
+                      </time>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="mt-2 text-sm text-neutral-500">
+                  Activity appears here as this job moves through the pipeline.
+                </p>
+              )}
+            </div>
           </div>
 
           {activeResume && !activeFit && (

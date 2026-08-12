@@ -6,6 +6,8 @@ const mockTailorResumeForJob = vi.fn();
 const mockSaveDiscoveredListing = vi.fn();
 const mockCreateTailoredResumeCopy = vi.fn();
 const mockMarkJobApplied = vi.fn();
+const mockUpdateApplicationNotes = vi.fn();
+const mockApplicationNotesSafeParse = vi.fn();
 const mockUpdateJobSource = vi.fn();
 const mockCreateJobSearchProfile = vi.fn();
 const mockUpdateJobSearchProfile = vi.fn();
@@ -53,6 +55,11 @@ vi.mock("@/lib/jobs/application-state", () => ({
   markJobApplied: mockMarkJobApplied,
 }));
 
+vi.mock("@/lib/jobs/application-record", () => ({
+  ApplicationNotesSchema: { safeParse: mockApplicationNotesSafeParse },
+  updateApplicationNotes: mockUpdateApplicationNotes,
+}));
+
 vi.mock("@/lib/jobs/discovery", () => ({
   JobSearchProfileInputSchema: {
     parse: vi.fn((value) => value),
@@ -98,6 +105,8 @@ beforeEach(() => {
   mockSaveDiscoveredListing.mockReset();
   mockCreateTailoredResumeCopy.mockReset();
   mockMarkJobApplied.mockReset();
+  mockUpdateApplicationNotes.mockReset();
+  mockApplicationNotesSafeParse.mockReset();
   mockUpdateJobSource.mockReset();
   mockCreateJobSearchProfile.mockReset();
   mockUpdateJobSearchProfile.mockReset();
@@ -465,6 +474,50 @@ describe("markJobAppliedAction", () => {
       /REDIRECT:\/job\/job-1\?notice=applied/,
     );
     expect(mockMarkJobApplied).toHaveBeenCalledWith({ jobId: "job-1" });
+  });
+});
+
+describe("updateApplicationNotesAction", () => {
+  it("validates notes before persistence", async () => {
+    mockApplicationNotesSafeParse.mockReturnValueOnce({
+      success: false,
+      error: { issues: [{ message: "Notes are too long." }] },
+    });
+    const formData = new FormData();
+    formData.set("notes", "x".repeat(4_001));
+
+    const { updateApplicationNotesAction } = await import("./jobs");
+    await expect(
+      updateApplicationNotesAction(
+        "job-1",
+        { error: null, saved: false },
+        formData,
+      ),
+    ).resolves.toEqual({ error: "Notes are too long.", saved: false });
+    expect(mockUpdateApplicationNotes).not.toHaveBeenCalled();
+  });
+
+  it("persists validated notes for the owned job", async () => {
+    mockApplicationNotesSafeParse.mockReturnValueOnce({
+      success: true,
+      data: "Follow up Friday",
+    });
+    mockUpdateApplicationNotes.mockResolvedValueOnce(undefined);
+    const formData = new FormData();
+    formData.set("notes", "Follow up Friday");
+
+    const { updateApplicationNotesAction } = await import("./jobs");
+    await expect(
+      updateApplicationNotesAction(
+        "job-1",
+        { error: null, saved: false },
+        formData,
+      ),
+    ).resolves.toEqual({ error: null, saved: true });
+    expect(mockUpdateApplicationNotes).toHaveBeenCalledWith({
+      jobId: "job-1",
+      notes: "Follow up Friday",
+    });
   });
 });
 

@@ -66,8 +66,8 @@ Priority meanings:
 - [x] Preserve the discovery source row and canonical listing link on the structured job.
 - [x] Move listing status to tailored when a tailored resume is created.
 - [x] Add an applied action with application date.
-- [ ] Add optional application notes.
-- [ ] Show the full listing/application state history on the job page.
+- [x] Add optional application notes.
+- [x] Show the full listing/application state history on the job page.
 - [x] Add integration tests for duplicate discovery and every state transition.
 
 ### Fit and tailoring

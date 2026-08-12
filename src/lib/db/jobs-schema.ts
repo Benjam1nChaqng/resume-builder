@@ -55,6 +55,7 @@ export const application = pgTable(
       onDelete: "set null",
     }),
     status: text("status").default("draft").notNull(),
+    notes: text("notes"),
     appliedAt: timestamp("applied_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -241,6 +242,43 @@ export const jobListing = pgTable(
   ],
 );
 
+export const jobPipelineEvent = pgTable(
+  "job_pipeline_event",
+  {
+    id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    jobId: text("job_id").references(() => job.id, { onDelete: "cascade" }),
+    listingId: text("listing_id").references(() => jobListing.id, {
+      onDelete: "cascade",
+    }),
+    status: text("status").notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("job_pipeline_event_user_job_idx").on(
+      table.userId,
+      table.jobId,
+      table.occurredAt,
+    ),
+    index("job_pipeline_event_listing_idx").on(
+      table.listingId,
+      table.occurredAt,
+    ),
+    check(
+      "job_pipeline_event_subject_check",
+      sql`${table.jobId} is not null or ${table.listingId} is not null`,
+    ),
+    check(
+      "job_pipeline_event_status_check",
+      sql`${table.status} in ('discovered', 'saved', 'rejected', 'tailored', 'applied')`,
+    ),
+  ],
+);
+
 export const resumeJobFit = pgTable(
   "resume_job_fit",
   {
@@ -311,6 +349,24 @@ export const applicationRelations = relations(application, ({ one }) => ({
     references: [resume.id],
   }),
 }));
+
+export const jobPipelineEventRelations = relations(
+  jobPipelineEvent,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [jobPipelineEvent.userId],
+      references: [user.id],
+    }),
+    job: one(job, {
+      fields: [jobPipelineEvent.jobId],
+      references: [job.id],
+    }),
+    listing: one(jobListing, {
+      fields: [jobPipelineEvent.listingId],
+      references: [jobListing.id],
+    }),
+  }),
+);
 
 export const jobSearchProfileRelations = relations(
   jobSearchProfile,

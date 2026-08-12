@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-12: Added owned private application notes and a trigger-backed chronological job pipeline history with migration `0012`.
 - 2026-08-12: Enforced compare-and-set listing transitions, made applied application/listing updates atomic, and covered duplicate discovery plus every MVP lifecycle transition.
 - 2026-08-12: Added guarded paginated Workday tenant discovery with localized job links, search facets, remote normalization, and fixture-backed validation.
 - 2026-08-11: Added field-level profile-edit validation with preserved form values, checkbox state, stale ownership feedback, and safe infrastructure errors.
