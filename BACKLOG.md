@@ -19,7 +19,7 @@ Priority meanings:
 - [x] Add source-backed resume fit analysis and persistence.
 - [x] Add non-destructive tailored resume copies with `originalText` provenance.
 - [x] Generate and commit Drizzle snapshot metadata for migration `0003`.
-- [ ] Verify migration `0003` against a disposable Postgres or Neon branch.
+- [x] Verify migration `0003` against a disposable Postgres or Neon branch.
 - [x] Add database constraints for status fields and fit score range where practical.
 - [x] Keep immutable repeated fit history and deterministically select the newest result per resume.
 - [x] Make tailored resume creation atomic or fully compensate every partial write.
