@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createJobSourceForUser,
   setJobSourceEnabledForUser,
+  upsertDiscoveredListings,
+  updateListingStatusForUser,
   updateJobSourceForUser,
 } from "./discovery-repo";
 
@@ -17,6 +19,7 @@ const {
   mockInsert,
   mockSet,
   mockUpdateWhere,
+  mockUpdateReturning,
   mockUpdate,
   mockAssertPublicHttpUrl,
 } = vi.hoisted(() => {
@@ -29,7 +32,8 @@ const {
   const mockOnConflictDoNothing = vi.fn(() => ({ returning: mockReturning }));
   const mockValues = vi.fn(() => ({ onConflictDoNothing: mockOnConflictDoNothing }));
   const mockInsert = vi.fn(() => ({ values: mockValues }));
-  const mockUpdateWhere = vi.fn();
+  const mockUpdateReturning = vi.fn();
+  const mockUpdateWhere = vi.fn(() => ({ returning: mockUpdateReturning }));
   const mockSet = vi.fn(() => ({ where: mockUpdateWhere }));
   const mockUpdate = vi.fn(() => ({ set: mockSet }));
   const mockAssertPublicHttpUrl = vi.fn();
@@ -45,6 +49,7 @@ const {
     mockInsert,
     mockSet,
     mockUpdateWhere,
+    mockUpdateReturning,
     mockUpdate,
     mockAssertPublicHttpUrl,
   };
@@ -74,6 +79,8 @@ beforeEach(() => {
   mockInsert.mockClear();
   mockSet.mockClear();
   mockUpdateWhere.mockReset();
+  mockUpdateWhere.mockImplementation(() => ({ returning: mockUpdateReturning }));
+  mockUpdateReturning.mockReset();
   mockUpdate.mockClear();
   mockAssertPublicHttpUrl.mockReset();
 });
@@ -150,7 +157,7 @@ describe("updateJobSourceForUser", () => {
   it("updates an owned source after public URL validation", async () => {
     mockLimit.mockResolvedValueOnce([{ profileId: "profile-1" }]);
     mockAssertPublicHttpUrl.mockResolvedValueOnce(new URL(input.url));
-    mockUpdateWhere.mockResolvedValueOnce(undefined);
+    mockUpdateWhere.mockReturnValueOnce({ returning: mockUpdateReturning });
 
     await expect(
       updateJobSourceForUser("user-1", "source-1", input),
@@ -163,10 +170,137 @@ describe("updateJobSourceForUser", () => {
   it("returns a useful duplicate-source error", async () => {
     mockLimit.mockResolvedValueOnce([{ profileId: "profile-1" }]);
     mockAssertPublicHttpUrl.mockResolvedValueOnce(new URL(input.url));
-    mockUpdateWhere.mockRejectedValueOnce({ code: "23505" });
+    mockUpdateWhere.mockImplementationOnce(() => {
+      throw { code: "23505" };
+    });
 
     await expect(
       updateJobSourceForUser("user-1", "source-1", input),
     ).rejects.toThrow(/already added/i);
+  });
+});
+
+describe("updateListingStatusForUser", () => {
+  it.each([
+    ["discovered", "rejected", undefined],
+    ["rejected", "discovered", undefined],
+    ["discovered", "saved", "job-1"],
+  ] as const)(
+    "allows the %s to %s transition",
+    async (fromStatus, toStatus, jobId) => {
+      mockLimit.mockResolvedValueOnce([
+        { profileId: "profile-1", status: fromStatus },
+      ]);
+      mockUpdateReturning.mockResolvedValueOnce([{ id: "listing-1" }]);
+
+      await expect(
+        updateListingStatusForUser({
+          userId: "user-1",
+          listingId: "listing-1",
+          status: toStatus,
+          ...(jobId ? { jobId } : {}),
+        }),
+      ).resolves.toBe("profile-1");
+
+      expect(mockSet).toHaveBeenCalledWith({
+        status: toStatus,
+        ...(jobId ? { jobId } : {}),
+      });
+    },
+  );
+
+  it.each([
+    ["saved", "rejected"],
+    ["tailored", "discovered"],
+    ["applied", "rejected"],
+  ] as const)(
+    "rejects the %s to %s regression",
+    async (fromStatus, toStatus) => {
+      mockLimit.mockResolvedValueOnce([
+        { profileId: "profile-1", status: fromStatus },
+      ]);
+
+      await expect(
+        updateListingStatusForUser({
+          userId: "user-1",
+          listingId: "listing-1",
+          status: toStatus,
+        }),
+      ).rejects.toThrow(`cannot move from ${fromStatus} to ${toStatus}`);
+      expect(mockUpdate).not.toHaveBeenCalled();
+    },
+  );
+
+  it("requires a structured job before moving a listing to saved", async () => {
+    mockLimit.mockResolvedValueOnce([
+      { profileId: "profile-1", status: "discovered" },
+    ]);
+
+    await expect(
+      updateListingStatusForUser({
+        userId: "user-1",
+        listingId: "listing-1",
+        status: "saved",
+      }),
+    ).rejects.toThrow(/must link to a job/i);
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("detects a concurrent listing-state change", async () => {
+    mockLimit.mockResolvedValueOnce([
+      { profileId: "profile-1", status: "discovered" },
+    ]);
+    mockUpdateReturning.mockResolvedValueOnce([]);
+
+    await expect(
+      updateListingStatusForUser({
+        userId: "user-1",
+        listingId: "listing-1",
+        status: "rejected",
+      }),
+    ).rejects.toThrow(/changed while/i);
+  });
+});
+
+describe("upsertDiscoveredListings", () => {
+  it("reports inserts once and treats a repeated discovery as a duplicate", async () => {
+    const listing = {
+      canonicalUrl: "https://acme.example/jobs/warehouse-1",
+      title: "Warehouse Associate",
+      company: "Acme",
+      location: "Los Angeles, CA",
+    };
+    mockReturning
+      .mockResolvedValueOnce([{ id: "listing-1" }])
+      .mockResolvedValueOnce([]);
+
+    await expect(
+      upsertDiscoveredListings({
+        profileId: "profile-1",
+        sourceId: "source-1",
+        listings: [listing],
+      }),
+    ).resolves.toBe(1);
+    await expect(
+      upsertDiscoveredListings({
+        profileId: "profile-1",
+        sourceId: "source-1",
+        listings: [listing],
+      }),
+    ).resolves.toBe(0);
+
+    expect(mockOnConflictDoNothing).toHaveBeenCalledTimes(2);
+    expect(mockValues).toHaveBeenNthCalledWith(
+      1,
+      expect.arrayContaining([
+        expect.objectContaining({
+          profileId: "profile-1",
+          sourceId: "source-1",
+          canonicalUrl: listing.canonicalUrl,
+          title: listing.title,
+          fingerprint: expect.any(String),
+        }),
+      ]),
+    );
   });
 });

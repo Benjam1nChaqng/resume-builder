@@ -263,17 +263,42 @@ export async function updateListingStatusForUser({
   jobId?: string;
 }): Promise<string> {
   const rows = await db
-    .select({ profileId: jobListing.profileId })
+    .select({
+      profileId: jobListing.profileId,
+      status: jobListing.status,
+    })
     .from(jobListing)
     .innerJoin(jobSearchProfile, eq(jobListing.profileId, jobSearchProfile.id))
     .where(and(eq(jobListing.id, listingId), eq(jobSearchProfile.userId, userId)))
     .limit(1);
   if (!rows[0]) throw new Error("Job listing not found.");
 
-  await db
+  const allowedTransitions: Record<string, readonly string[]> = {
+    discovered: ["saved", "rejected"],
+    rejected: ["discovered"],
+  };
+  if (!allowedTransitions[rows[0].status]?.includes(status)) {
+    throw new Error(
+      `Job listing cannot move from ${rows[0].status} to ${status}.`,
+    );
+  }
+  if (status === "saved" && !jobId) {
+    throw new Error("A saved job listing must link to a job.");
+  }
+
+  const updated = await db
     .update(jobListing)
     .set({ status, ...(jobId ? { jobId } : {}) })
-    .where(eq(jobListing.id, listingId));
+    .where(
+      and(
+        eq(jobListing.id, listingId),
+        eq(jobListing.status, rows[0].status),
+      ),
+    )
+    .returning({ id: jobListing.id });
+  if (!updated[0]) {
+    throw new Error("Job listing changed while it was being updated. Try again.");
+  }
   return rows[0].profileId;
 }
 

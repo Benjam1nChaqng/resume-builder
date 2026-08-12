@@ -68,7 +68,7 @@ Priority meanings:
 - [x] Add an applied action with application date.
 - [ ] Add optional application notes.
 - [ ] Show the full listing/application state history on the job page.
-- [ ] Add integration tests for duplicate discovery and every state transition.
+- [x] Add integration tests for duplicate discovery and every state transition.
 
 ### Fit and tailoring
 
