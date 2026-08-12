@@ -207,6 +207,11 @@ type PublicTextResult = {
   finalUrl: string;
 };
 
+type PublicTextRequest = {
+  method: "GET" | "POST";
+  body?: string;
+};
+
 async function fetchPublicText(
   rawUrl: string,
   options: FetchPublicResourceOptions,
@@ -215,12 +220,15 @@ async function fetchPublicText(
     acceptsContentType: (contentType: string) => boolean;
     invalidContentMessage: string;
   },
+  request: PublicTextRequest = { method: "GET" },
 ): Promise<PublicTextResult> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const resolver = options.resolver ?? defaultResolver;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
   let currentUrl = rawUrl;
+  let method = request.method;
+  let body = request.body;
 
   for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
     const safeUrl = await assertPublicHttpUrl(currentUrl, resolver);
@@ -233,7 +241,10 @@ async function fetchPublicText(
           "User-Agent":
             "Mozilla/5.0 (compatible; ResumeBuilderBot/0.1; +https://github.com/Benjam1nChaqng/resume-builder)",
           Accept: responseType.accept,
+          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
         },
+        method,
+        body,
         redirect: "manual",
         signal: controller.signal,
       });
@@ -250,6 +261,10 @@ async function fetchPublicText(
       const location = response.headers.get("location");
       if (!location) throw new Error("Redirect response did not include a location.");
       currentUrl = new URL(location, safeUrl).toString();
+      if (response.status === 303 || ([301, 302].includes(response.status) && method === "POST")) {
+        method = "GET";
+        body = undefined;
+      }
       await response.body?.cancel();
       continue;
     }
@@ -296,6 +311,31 @@ export async function fetchPublicJson(
       /application\/[^;]+\+json/.test(contentType),
     invalidContentMessage: "Source did not return JSON content.",
   });
+
+  try {
+    return { data: JSON.parse(result.text), finalUrl: result.finalUrl };
+  } catch {
+    throw new Error("Source returned invalid JSON content.");
+  }
+}
+
+export async function postPublicJson(
+  rawUrl: string,
+  body: unknown,
+  options: FetchPublicResourceOptions = {},
+): Promise<PublicJsonResult> {
+  const result = await fetchPublicText(
+    rawUrl,
+    options,
+    {
+      accept: "application/json",
+      acceptsContentType: (contentType) =>
+        contentType.includes("application/json") ||
+        /application\/[^;]+\+json/.test(contentType),
+      invalidContentMessage: "Source did not return JSON content.",
+    },
+    { method: "POST", body: JSON.stringify(body) },
+  );
 
   try {
     return { data: JSON.parse(result.text), finalUrl: result.finalUrl };

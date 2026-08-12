@@ -4,10 +4,19 @@ import {
   parseJobListingsFromHtml,
   type DiscoveredListing,
 } from "./discovery";
-import { fetchPublicHtml, fetchPublicJson } from "./public-web";
+import {
+  fetchPublicHtml,
+  fetchPublicJson,
+  postPublicJson,
+} from "./public-web";
 
 const MAX_ADAPTER_LISTINGS = 100;
+const WORKDAY_PAGE_SIZE = 20;
 const ATS_SLUG_PATTERN = /^[a-zA-Z0-9_-]+$/;
+const WORKDAY_HOSTNAME_PATTERN = /^([a-z0-9-]+)\.wd\d+\.myworkdayjobs\.com$/;
+const WORKDAY_LOCALE_PATTERN = /^[a-z]{2}(?:-[a-z]{2})?$/i;
+const WORKDAY_FACET_KEY_PATTERN = /^[a-z][a-z0-9]{0,63}$/i;
+const WORKDAY_SEARCH_KEYS = new Set(["q", "query", "searchText"]);
 
 const GreenhouseResponseSchema = z.object({
   jobs: z.array(
@@ -64,14 +73,37 @@ const AshbyResponseSchema = z.object({
   ),
 });
 
+const WorkdayResponseSchema = z.object({
+  total: z.number().int().nonnegative(),
+  jobPostings: z.array(
+    z.object({
+      title: z.string().trim().min(1),
+      externalPath: z.string().trim().regex(/^\/job\//),
+      locationsText: z.string().trim().nullable().optional(),
+      postedOn: z.string().trim().nullable().optional(),
+      remoteType: z.string().trim().nullable().optional(),
+    }),
+  ),
+});
+
+type WorkdaySource = {
+  kind: "workday";
+  endpoint: string;
+  publicBaseUrl: string;
+  searchText: string;
+  appliedFacets: Record<string, string[]>;
+};
+
 export type SupportedJobSource =
   | { kind: "greenhouse"; endpoint: string }
   | { kind: "lever"; endpoint: string }
-  | { kind: "ashby"; endpoint: string };
+  | { kind: "ashby"; endpoint: string }
+  | WorkdaySource;
 
 type SourceAdapterDependencies = {
   fetchHtml?: typeof fetchPublicHtml;
   fetchJson?: typeof fetchPublicJson;
+  postJson?: typeof postPublicJson;
 };
 
 function firstPathSegment(url: URL): string | null {
@@ -131,6 +163,60 @@ function ashbySource(url: URL): SupportedJobSource | null {
   };
 }
 
+function decodePathSegment(value: string): string | null {
+  try {
+    return decodeURIComponent(value).trim();
+  } catch {
+    return null;
+  }
+}
+
+function workdaySource(url: URL): WorkdaySource | null {
+  const hostnameMatch = url.hostname.match(WORKDAY_HOSTNAME_PATTERN);
+  if (!hostnameMatch) return null;
+  const tenant = hostnameMatch[1];
+  if (!tenant || !ATS_SLUG_PATTERN.test(tenant)) return null;
+
+  const pathSegments = url.pathname.split("/").filter(Boolean);
+  const locale = pathSegments[0]?.match(WORKDAY_LOCALE_PATTERN)
+    ? pathSegments.shift()
+    : undefined;
+  const site = decodePathSegment(pathSegments[0] ?? "");
+  if (!site || !ATS_SLUG_PATTERN.test(site)) return null;
+
+  const searchText =
+    [...WORKDAY_SEARCH_KEYS]
+      .map((key) => url.searchParams.get(key)?.trim())
+      .find(Boolean)
+      ?.slice(0, 200) ?? "";
+  const appliedFacets: Record<string, string[]> = {};
+  for (const key of new Set(url.searchParams.keys())) {
+    if (
+      WORKDAY_SEARCH_KEYS.has(key) ||
+      key.toLowerCase().startsWith("utm_") ||
+      !WORKDAY_FACET_KEY_PATTERN.test(key)
+    ) {
+      continue;
+    }
+    const values = url.searchParams
+      .getAll(key)
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .slice(0, 20)
+      .map((value) => value.slice(0, 200));
+    if (values.length > 0) appliedFacets[key] = values;
+  }
+
+  const publicPath = [locale, site].filter(Boolean).join("/");
+  return {
+    kind: "workday",
+    endpoint: `${url.origin}/wday/cxs/${tenant}/${site}/jobs`,
+    publicBaseUrl: `${url.origin}/${publicPath}`,
+    searchText,
+    appliedFacets,
+  };
+}
+
 export function detectSupportedJobSource(rawUrl: string): SupportedJobSource | null {
   let url: URL;
   try {
@@ -139,7 +225,12 @@ export function detectSupportedJobSource(rawUrl: string): SupportedJobSource | n
     return null;
   }
   url.hostname = url.hostname.toLowerCase();
-  return greenhouseSource(url) ?? leverSource(url) ?? ashbySource(url);
+  return (
+    greenhouseSource(url) ??
+    leverSource(url) ??
+    ashbySource(url) ??
+    workdaySource(url)
+  );
 }
 
 export function attributeListingsToSourceCompany(
@@ -240,6 +331,72 @@ function parseAshbyListings(data: unknown): DiscoveredListing[] {
     });
 }
 
+function parseWorkdayPage(
+  data: unknown,
+  publicBaseUrl: string,
+): { listings: DiscoveredListing[]; total: number } {
+  const parsed = WorkdayResponseSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error("Workday returned unexpected job data.");
+  }
+
+  return {
+    total: parsed.data.total,
+    listings: parsed.data.jobPostings.map((listing) => {
+      const location = listing.locationsText || null;
+      const isRemote = listing.remoteType?.toLowerCase() === "remote";
+      return {
+        canonicalUrl: canonicalizeJobUrl(
+          new URL(
+            listing.externalPath.replace(/^\//, ""),
+            `${publicBaseUrl}/`,
+          ).toString(),
+        ),
+        title: listing.title.slice(0, 180),
+        company: null,
+        location: isRemote
+          ? location && !location.toLowerCase().includes("remote")
+            ? `Remote - ${location}`
+            : "Remote"
+          : location,
+        postedAt: validDate(listing.postedOn),
+      };
+    }),
+  };
+}
+
+async function discoverWorkdayListings(
+  source: WorkdaySource,
+  postJson: typeof postPublicJson,
+): Promise<DiscoveredListing[]> {
+  const listings: DiscoveredListing[] = [];
+
+  for (let offset = 0; offset < MAX_ADAPTER_LISTINGS; offset += WORKDAY_PAGE_SIZE) {
+    const limit = Math.min(
+      WORKDAY_PAGE_SIZE,
+      MAX_ADAPTER_LISTINGS - offset,
+    );
+    const { data } = await postJson(source.endpoint, {
+      appliedFacets: source.appliedFacets,
+      limit,
+      offset,
+      searchText: source.searchText,
+    });
+    const page = parseWorkdayPage(data, source.publicBaseUrl);
+    listings.push(...page.listings);
+
+    if (
+      page.listings.length === 0 ||
+      page.listings.length < limit ||
+      listings.length >= page.total
+    ) {
+      break;
+    }
+  }
+
+  return listings.slice(0, MAX_ADAPTER_LISTINGS);
+}
+
 export async function discoverListingsFromSource(
   sourceUrl: string,
   dependencies: SourceAdapterDependencies = {},
@@ -250,6 +407,13 @@ export async function discoverListingsFromSource(
       sourceUrl,
     );
     return parseJobListingsFromHtml(html, finalUrl);
+  }
+
+  if (adapter.kind === "workday") {
+    return discoverWorkdayListings(
+      adapter,
+      dependencies.postJson ?? postPublicJson,
+    );
   }
 
   const { data } = await (dependencies.fetchJson ?? fetchPublicJson)(

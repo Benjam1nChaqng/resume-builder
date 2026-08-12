@@ -62,6 +62,24 @@ describe("fixture-backed job discovery", () => {
     });
   });
 
+  it("parses representative Workday search data", async () => {
+    const data = await jsonFixture("workday-jobs.json");
+    const listings = await discoverListingsFromSource(
+      "https://workday.wd5.myworkdayjobs.com/en-US/Workday",
+      { postJson: vi.fn().mockResolvedValue({ data, finalUrl: "fixture" }) },
+    );
+
+    expect(listings).toHaveLength(2);
+    expect(listings[0]).toMatchObject({
+      canonicalUrl:
+        "https://workday.wd5.myworkdayjobs.com/en-US/Workday/job/USAVAReston/Customer-Support-Analyst_JR-0100001",
+      title: "Customer Support Analyst",
+      location: "Remote - Reston, VA",
+      postedAt: new Date("2026-08-01T12:00:00.000Z"),
+    });
+    expect(listings[1]?.postedAt).toBeNull();
+  });
+
   it("prefers JSON-LD metadata and deduplicates HTML fallback links", async () => {
     const html = await htmlFixture("career-page.html");
     const listings = parseJobListingsFromHtml(

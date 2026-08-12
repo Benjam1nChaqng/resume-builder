@@ -78,6 +78,22 @@ describe("job source adapters", () => {
     });
   });
 
+  it("maps localized Workday search URLs and preserves search facets", () => {
+    expect(
+      detectSupportedJobSource(
+        "https://workday.wd5.myworkdayjobs.com/en-US/Workday/jobs?q=customer%20support&locationCountry=USA&locationCountry=CAN&utm_source=feed",
+      ),
+    ).toEqual({
+      kind: "workday",
+      endpoint:
+        "https://workday.wd5.myworkdayjobs.com/wday/cxs/workday/Workday/jobs",
+      publicBaseUrl:
+        "https://workday.wd5.myworkdayjobs.com/en-US/Workday",
+      searchText: "customer support",
+      appliedFacets: { locationCountry: ["USA", "CAN"] },
+    });
+  });
+
   it("extracts Greenhouse jobs from structured API data", async () => {
     const fetchJson = vi.fn().mockResolvedValue({
       finalUrl: "https://boards-api.greenhouse.io/v1/boards/acme/jobs",
@@ -185,6 +201,70 @@ describe("job source adapters", () => {
     ]);
   });
 
+  it("paginates Workday results up to the adapter listing limit", async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => ({
+      title: `Support Associate ${index + 1}`,
+      externalPath: `/job/Remote/Support-Associate-${index + 1}_JR-${index + 1}`,
+      locationsText: "United States",
+      postedOn: "Posted Today",
+      remoteType: "Remote",
+    }));
+    const postJson = vi
+      .fn()
+      .mockResolvedValueOnce({
+        finalUrl: "fixture-page-1",
+        data: { total: 21, jobPostings: firstPage },
+      })
+      .mockResolvedValueOnce({
+        finalUrl: "fixture-page-2",
+        data: {
+          total: 21,
+          jobPostings: [
+            {
+              title: "Office Coordinator",
+              externalPath: "/job/Pleasanton/Office-Coordinator_JR-21",
+              locationsText: "Pleasanton, CA",
+              postedOn: "2026-08-01T12:00:00.000Z",
+              remoteType: "Onsite",
+            },
+          ],
+        },
+      });
+
+    const listings = await discoverListingsFromSource(
+      "https://workday.wd5.myworkdayjobs.com/en-US/Workday?q=support",
+      { postJson },
+    );
+
+    expect(listings).toHaveLength(21);
+    expect(listings[0]).toMatchObject({
+      canonicalUrl:
+        "https://workday.wd5.myworkdayjobs.com/en-US/Workday/job/Remote/Support-Associate-1_JR-1",
+      location: "Remote - United States",
+      postedAt: null,
+    });
+    expect(postJson).toHaveBeenNthCalledWith(
+      1,
+      "https://workday.wd5.myworkdayjobs.com/wday/cxs/workday/Workday/jobs",
+      {
+        appliedFacets: {},
+        limit: 20,
+        offset: 0,
+        searchText: "support",
+      },
+    );
+    expect(postJson).toHaveBeenNthCalledWith(
+      2,
+      "https://workday.wd5.myworkdayjobs.com/wday/cxs/workday/Workday/jobs",
+      {
+        appliedFacets: {},
+        limit: 20,
+        offset: 20,
+        searchText: "support",
+      },
+    );
+  });
+
   it("falls back to safe HTML discovery for unsupported sources", async () => {
     const fetchHtml = vi.fn().mockResolvedValue({
       finalUrl: "https://careers.example.com/openings",
@@ -207,5 +287,32 @@ describe("job source adapters", () => {
         fetchJson,
       }),
     ).rejects.toThrow(/unexpected job data/);
+
+    await expect(
+      discoverListingsFromSource(
+        "https://workday.wd5.myworkdayjobs.com/Workday",
+        {
+          postJson: vi.fn().mockResolvedValue({
+            data: { total: 1, jobPostings: [{ title: "Missing path" }] },
+          }),
+        },
+      ),
+    ).rejects.toThrow(/Workday returned unexpected job data/);
+
+    await expect(
+      discoverListingsFromSource(
+        "https://workday.wd5.myworkdayjobs.com/Workday",
+        {
+          postJson: vi.fn().mockResolvedValue({
+            data: {
+              total: 1,
+              jobPostings: [
+                { title: "Unsafe path", externalPath: "//example.com/job/1" },
+              ],
+            },
+          }),
+        },
+      ),
+    ).rejects.toThrow(/Workday returned unexpected job data/);
   });
 });

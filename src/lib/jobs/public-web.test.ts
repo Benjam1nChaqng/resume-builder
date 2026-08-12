@@ -5,6 +5,7 @@ import {
   fetchPublicJson,
   isBlockedIpAddress,
   normalizeHttpUrl,
+  postPublicJson,
   type HostResolver,
 } from "./public-web";
 
@@ -119,6 +120,41 @@ describe("public web URL safety", () => {
         resolver: publicResolver,
       }),
     ).rejects.toThrow(/invalid JSON/);
+  });
+
+  it("posts JSON through the same public-resource safety boundary", async () => {
+    const postFetch = vi.fn().mockResolvedValueOnce(
+      new Response('{"total":0,"jobPostings":[]}', {
+        headers: { "content-type": "application/json" },
+      }),
+    );
+
+    await expect(
+      postPublicJson(
+        "https://example.com/jobs",
+        { appliedFacets: {}, limit: 20, offset: 0, searchText: "" },
+        { fetchImpl: postFetch, resolver: publicResolver },
+      ),
+    ).resolves.toEqual({
+      data: { total: 0, jobPostings: [] },
+      finalUrl: "https://example.com/jobs",
+    });
+    expect(postFetch).toHaveBeenCalledWith(
+      new URL("https://example.com/jobs"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          appliedFacets: {},
+          limit: 20,
+          offset: 0,
+          searchText: "",
+        }),
+        headers: expect.objectContaining({
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        }),
+      }),
+    );
   });
 
   it("aborts requests that exceed the timeout", async () => {

@@ -1,0 +1,21 @@
+{
+  "total": 2,
+  "jobPostings": [
+    {
+      "title": "Customer Support Analyst",
+      "externalPath": "/job/USAVAReston/Customer-Support-Analyst_JR-0100001",
+      "locationsText": "Reston, VA",
+      "postedOn": "2026-08-01T12:00:00.000Z",
+      "remoteType": "Remote",
+      "bulletFields": ["JR-0100001"]
+    },
+    {
+      "title": "Office Coordinator",
+      "externalPath": "/job/USACAHome-Office/Office-Coordinator_JR-0100002",
+      "locationsText": "Pleasanton, CA",
+      "postedOn": "Posted 2 Days Ago",
+      "remoteType": "Onsite",
+      "bulletFields": ["JR-0100002"]
+    }
+  ]
+}
