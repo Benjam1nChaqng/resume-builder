@@ -18,12 +18,13 @@ export function DiscoveredListingActions({
   const [isPending, startTransition] = useTransition();
 
   return (
-    <div className="flex gap-2">
+    <div className="flex w-full gap-2 sm:w-auto">
       {status === "rejected" ? (
         <Button
           type="button"
           size="sm"
           variant="outline"
+          className="w-full sm:w-auto"
           disabled={isPending}
           onClick={() =>
             startTransition(() => restoreDiscoveredListingAction(listingId))
@@ -37,6 +38,7 @@ export function DiscoveredListingActions({
         type="button"
         size="sm"
         disabled={isPending}
+        className="flex-1 sm:flex-none"
         onClick={() =>
           startTransition(() => saveDiscoveredListingAction(listingId))
         }
@@ -47,6 +49,7 @@ export function DiscoveredListingActions({
         type="button"
         size="sm"
         variant="outline"
+        className="flex-1 sm:flex-none"
         disabled={isPending}
         onClick={() =>
           startTransition(() => rejectDiscoveredListingAction(listingId))

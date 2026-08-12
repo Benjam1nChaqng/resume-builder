@@ -57,7 +57,7 @@ export function JobSearchProfileCreateForm() {
         error={state.fieldErrors.locationPreference?.[0]}
         defaultValue={state.values?.locationPreference}
       />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 min-[380px]:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="new-remotePreference">Remote</Label>
           <select
@@ -94,7 +94,7 @@ export function JobSearchProfileCreateForm() {
         error={state.fieldErrors.exclusions?.[0]}
         defaultValue={state.values?.exclusions}
       />
-      <div className="grid grid-cols-2 gap-2 text-sm">
+      <div className="grid gap-2 text-sm min-[340px]:grid-cols-2">
         {BASIC_JOB_FILTERS.map((filter) => (
           <label key={filter} className="flex items-center gap-2">
             <input

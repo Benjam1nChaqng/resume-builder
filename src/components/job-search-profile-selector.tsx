@@ -20,7 +20,7 @@ export function JobSearchProfileSelector({
         const profileId = event.target.value;
         startTransition(() => selectJobSearchProfileAction(profileId));
       }}
-      className="h-9 min-w-48 rounded-md border border-neutral-200 bg-white px-3 text-sm dark:border-neutral-800 dark:bg-neutral-950"
+      className="h-9 w-full min-w-0 rounded-md border border-neutral-200 bg-white px-3 text-sm sm:w-auto sm:min-w-48 dark:border-neutral-800 dark:bg-neutral-950"
     >
       {profiles.map((profile) => (
         <option key={profile.id} value={profile.id}>

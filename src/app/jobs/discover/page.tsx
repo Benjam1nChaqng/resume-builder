@@ -83,7 +83,7 @@ export default async function JobDiscoverPage({
   const visibleListings = listingView.items;
 
   return (
-    <main className="min-h-screen bg-white px-6 py-12 dark:bg-neutral-950">
+    <main className="min-h-screen bg-white px-3 py-8 sm:px-6 sm:py-12 dark:bg-neutral-950">
       <div className="mx-auto max-w-5xl">
         <Link
           href="/dashboard"
@@ -101,7 +101,7 @@ export default async function JobDiscoverPage({
               Manage searches for yourself or friends, then save the listings worth tailoring.
             </p>
           </div>
-          <div className="flex flex-col items-stretch gap-2 sm:items-end">
+          <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end">
             {activeProfile && (
               <JobSearchProfileSelector
                 profiles={profiles}
@@ -141,7 +141,7 @@ export default async function JobDiscoverPage({
                   ) : (
                     <ul className="mt-4 divide-y divide-neutral-200 border-t border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
                       {activeProfile.sources.map((source) => (
-                        <li key={source.id} className="flex items-center gap-2 py-3">
+                        <li key={source.id} className="flex flex-wrap items-center gap-2 py-3">
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium">{source.label}</p>
                             <p className="truncate text-xs text-neutral-500">{source.url}</p>
@@ -149,12 +149,14 @@ export default async function JobDiscoverPage({
                           {!source.enabled && (
                             <span className="text-xs text-neutral-400">Paused</span>
                           )}
-                          <JobSourceActions
-                            sourceId={source.id}
-                            enabled={source.enabled}
-                            sourceLabel={source.label}
-                            sourceUrl={source.url}
-                          />
+                          <div className="basis-full sm:basis-auto">
+                            <JobSourceActions
+                              sourceId={source.id}
+                              enabled={source.enabled}
+                              sourceLabel={source.label}
+                              sourceUrl={source.url}
+                            />
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -179,12 +181,13 @@ export default async function JobDiscoverPage({
                           {activeProfile.targetRoles.join(", ")}
                         </p>
                       </div>
-                      <form action={runJobDiscoveryAction}>
+                      <form action={runJobDiscoveryAction} className="w-full sm:w-auto">
                         <input type="hidden" name="profileId" value={activeProfile.id} />
                         <PendingSubmitButton
                           type="submit"
                           disabled={activeProfile.sources.filter((source) => source.enabled).length === 0}
                           pendingLabel="Discovering"
+                          className="w-full sm:w-auto"
                         >
                           Run discovery
                         </PendingSubmitButton>
@@ -249,16 +252,16 @@ export default async function JobDiscoverPage({
                           key={listing.id}
                           className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
                         >
-                          <div>
+                          <div className="min-w-0">
                             <a
                               href={listing.canonicalUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="font-medium text-neutral-900 underline-offset-4 hover:underline dark:text-neutral-50"
+                              className="break-words font-medium text-neutral-900 underline-offset-4 hover:underline dark:text-neutral-50"
                             >
                               {listing.title}
                             </a>
-                            <p className="mt-1 text-xs text-neutral-500">
+                            <p className="mt-1 break-words text-xs leading-relaxed text-neutral-500">
                               {[
                                 listing.company,
                                 listing.location,
@@ -279,10 +282,12 @@ export default async function JobDiscoverPage({
                           </div>
                           {listing.status === "discovered" ||
                           listing.status === "rejected" ? (
-                            <DiscoveredListingActions
-                              listingId={listing.id}
-                              status={listing.status}
-                            />
+                            <div className="w-full sm:w-auto">
+                              <DiscoveredListingActions
+                                listingId={listing.id}
+                                status={listing.status}
+                              />
+                            </div>
                           ) : listing.jobId ? (
                             <Link
                               href={`/job/${listing.jobId}`}

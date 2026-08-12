@@ -117,7 +117,7 @@ export function JobSearchProfileUpdateForm({ profile }: { profile: Profile }) {
         defaultValue={value("exclusions", profile.exclusions.join(", "))}
         error={state.fieldErrors.exclusions?.[0]}
       />
-      <div className="grid grid-cols-2 gap-2 text-sm sm:col-span-2">
+      <div className="grid gap-2 text-sm min-[340px]:grid-cols-2 sm:col-span-2">
         {BASIC_JOB_FILTERS.map((filter) => (
           <label key={filter} className="flex items-center gap-2">
             <input
@@ -141,8 +141,8 @@ export function JobSearchProfileUpdateForm({ profile }: { profile: Profile }) {
           {state.formError}
         </p>
       )}
-      <div className="flex flex-wrap gap-2 sm:col-span-2">
-        <PendingSubmitButton type="submit" pendingLabel="Saving">
+      <div className="flex flex-col gap-2 min-[380px]:flex-row min-[380px]:flex-wrap sm:col-span-2">
+        <PendingSubmitButton type="submit" pendingLabel="Saving" className="w-full min-[380px]:w-auto">
           Save criteria
         </PendingSubmitButton>
         <DeleteJobSearchProfileButton profileId={profile.id} />

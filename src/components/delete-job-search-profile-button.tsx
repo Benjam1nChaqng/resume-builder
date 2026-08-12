@@ -16,6 +16,7 @@ export function DeleteJobSearchProfileButton({
       type="button"
       size="sm"
       variant="destructive"
+      className="w-full min-[380px]:w-auto"
       disabled={isPending}
       onClick={() => {
         if (!window.confirm("Delete this search profile and its discovered listings?")) {
