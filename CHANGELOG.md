@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-17: Made the search-profile column migration resumable after a partial production migration run.
 - 2026-08-17: Switched production migrations to Drizzle's Neon HTTP runtime migrator with secret-safe diagnostics for Vercel builds.
 - 2026-08-17: Migrated every active AI agent from Anthropic to OpenAI Responses with GPT-5.6 tiered models, strict Zod output, private PDF input, and OpenAI-only runtime configuration.
 

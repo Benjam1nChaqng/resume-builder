@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   redactDatabaseSecrets,
   validateDatabaseUrl,
@@ -35,5 +37,14 @@ describe("database migration safety", () => {
     expect(redacted).toBe(
       "Failed [REDACTED_DATABASE_URL]; caused by [REDACTED_DATABASE_URL]",
     );
+  });
+
+  it("keeps the search-profile migration safe to resume", () => {
+    const sql = readFileSync(
+      resolve("src/lib/db/migrations/0013_colorful_mandrill.sql"),
+      "utf8",
+    );
+
+    expect(sql.match(/ADD COLUMN IF NOT EXISTS/g)).toHaveLength(3);
   });
 });
