@@ -16,7 +16,7 @@
     "verify:full": "node scripts/verify.mjs --full",
     "verify:mvp": "node scripts/verify.mjs --full --require-runtime",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "node scripts/migrate-database.mjs",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },
