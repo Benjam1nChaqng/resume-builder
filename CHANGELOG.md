@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-17: Added revocable hash-only agent keys, a user-scoped job and resume API, and a local Codex client for listing ingestion, structured job saves, tailored copies, and PDF downloads.
 - 2026-08-17: Replaced the default Next.js page metadata with Resume Builder product metadata.
 - 2026-08-17: Hardened the production recovery migration window so an out-of-date Drizzle journal can reconcile safely with the existing schema.
 - 2026-08-17: Made the search-profile column migration resumable after a partial production migration run.

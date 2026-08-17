@@ -9,6 +9,7 @@ import { job } from "@/lib/db/jobs-schema";
 import { ImportResumeButton } from "@/components/import-resume-button";
 import { SignOutButton } from "@/components/sign-out-button";
 import { buttonVariants } from "@/components/ui/button";
+import { KeyRound } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -43,7 +44,7 @@ export default async function DashboardPage() {
   return (
     <main className="min-h-screen bg-white px-6 py-16 dark:bg-neutral-950">
       <div className="mx-auto max-w-2xl">
-        <header className="flex items-baseline justify-between">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-50">
               Welcome, {session.user.name}
@@ -52,7 +53,16 @@ export default async function DashboardPage() {
               {session.user.email}
             </p>
           </div>
-          <SignOutButton />
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/settings/agent-access"
+              className={buttonVariants({ size: "sm", variant: "outline" })}
+            >
+              <KeyRound data-icon="inline-start" />
+              Agent access
+            </Link>
+            <SignOutButton />
+          </div>
         </header>
 
         <section className="mt-12">

@@ -172,6 +172,7 @@ Priority meanings:
 
 ### Agentic architecture
 
+- [x] Add revocable hash-only account keys and a versioned least-privilege agent bridge for context, listings, structured jobs, tailored copies, and PDFs.
 - [ ] Introduce the Codex Agent SDK orchestration layer after the deterministic services are stable.
 - [ ] Separate planner, executor, reviewer, and policy-check roles with explicit contracts.
 - [ ] Add resumable workflow state and step-level idempotency.

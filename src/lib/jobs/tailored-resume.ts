@@ -229,8 +229,30 @@ export async function createTailoredResumeCopy({
   if (jobAccess.userId !== resumeAccess.userId) {
     throw new Error("Job and resume owners do not match.");
   }
-  const { userId } = jobAccess;
-  const [jobRow] = await db.select().from(job).where(eq(job.id, jobId)).limit(1);
+  return createTailoredResumeCopyForUser({
+    userId: jobAccess.userId,
+    jobId,
+    resumeId,
+    acceptedChanges,
+  });
+}
+
+export async function createTailoredResumeCopyForUser({
+  userId,
+  jobId,
+  resumeId,
+  acceptedChanges,
+}: {
+  userId: string;
+  jobId: string;
+  resumeId: string;
+  acceptedChanges: TailoredBulletChange[];
+}): Promise<string> {
+  const [jobRow] = await db
+    .select()
+    .from(job)
+    .where(and(eq(job.id, jobId), eq(job.userId, userId)))
+    .limit(1);
   const source = await loadRenderableResume(resumeId);
   if (!jobRow) throw new Error("Job not found.");
   if (!source || source.userId !== userId) throw new Error("Resume not found.");
