@@ -1,5 +1,7 @@
 # Changelog
 
+- 2026-08-17: Added repo-owned code, full-build, and runtime-aware MVP verification commands with secret-safe environment preflight checks.
+
 - 2026-08-12: Applied migrations `0000` through `0012` to disposable PostgreSQL 16 and passed lifecycle trigger/constraint smoke checks.
 - 2026-08-12: Hardened job discovery profile, source, listing, selector, and action layouts for narrow phone widths and desktop breakpoints.
 - 2026-08-12: Added owned private application notes and a trigger-backed chronological job pipeline history with migration `0012`.
