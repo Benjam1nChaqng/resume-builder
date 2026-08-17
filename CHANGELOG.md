@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-17: Replaced the default Next.js page metadata with Resume Builder product metadata.
 - 2026-08-17: Hardened the production recovery migration window so an out-of-date Drizzle journal can reconcile safely with the existing schema.
 - 2026-08-17: Made the search-profile column migration resumable after a partial production migration run.
 - 2026-08-17: Switched production migrations to Drizzle's Neon HTTP runtime migrator with secret-safe diagnostics for Vercel builds.
