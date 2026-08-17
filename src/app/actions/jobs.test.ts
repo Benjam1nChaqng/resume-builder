@@ -323,7 +323,7 @@ describe("updateJobSearchProfileAction", () => {
     await expect(
       updateJobSearchProfileAction(initialDiscoveryFormState, formData),
     ).resolves.toMatchObject({
-      formError: "The selected search profile is no longer available.",
+      formError: "The selected saved search is no longer available.",
       submitted: true,
     });
     expect(mockRedirect).not.toHaveBeenCalled();
@@ -395,7 +395,7 @@ describe("createJobSourceAction", () => {
       createJobSourceAction(initialDiscoveryFormState, new FormData()),
     ).resolves.toMatchObject({
       fieldErrors: {},
-      formError: "This source is already added to the profile.",
+      formError: "This source is already added to the saved search.",
     });
   });
 

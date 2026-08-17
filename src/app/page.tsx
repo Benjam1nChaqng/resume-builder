@@ -12,7 +12,7 @@ export default async function Home() {
         Resume Builder
       </h1>
       <p className="mt-4 text-lg text-neutral-600 sm:text-xl dark:text-neutral-400">
-        Built with Claude Agent SDK + MCP
+        Find jobs, tailor your resume, and track every application.
       </p>
       <div className="mt-10 flex gap-3">
         {session ? (
@@ -31,7 +31,7 @@ export default async function Home() {
         )}
       </div>
       <p className="mt-16 text-xs uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-600">
-        Day 1 — Scaffolded
+        Your private job search workspace
       </p>
     </main>
   );

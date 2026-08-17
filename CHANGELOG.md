@@ -1,5 +1,7 @@
 # Changelog
 
+- 2026-08-17: Simplified job discovery into private saved searches and removed friend-managed workflow scope from the product UI and backlog.
+
 - 2026-08-17: Added repo-owned code, full-build, and runtime-aware MVP verification commands with secret-safe environment preflight checks.
 
 - 2026-08-12: Applied migrations `0000` through `0012` to disposable PostgreSQL 16 and passed lifecycle trigger/constraint smoke checks.

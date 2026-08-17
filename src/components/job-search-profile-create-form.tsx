@@ -36,8 +36,8 @@ export function JobSearchProfileCreateForm() {
     <form action={action} className="space-y-4">
       <Field
         name="candidateName"
-        label="Candidate"
-        placeholder="Maya"
+        label="Search name"
+        placeholder="Bay Area help desk"
         error={state.fieldErrors.candidateName?.[0]}
         defaultValue={state.values?.candidateName}
         required
@@ -116,7 +116,7 @@ export function JobSearchProfileCreateForm() {
         className="w-full"
         pendingLabel="Creating"
       >
-        Create profile
+        Save search
       </PendingSubmitButton>
     </form>
   );

@@ -53,8 +53,8 @@ export function JobSearchProfileUpdateForm({ profile }: { profile: Profile }) {
       <Field
         profileId={profile.id}
         name="candidateName"
-        label="Candidate"
-        placeholder="Maya"
+        label="Search name"
+        placeholder="Bay Area help desk"
         defaultValue={value("candidateName", profile.candidateName)}
         error={state.fieldErrors.candidateName?.[0]}
         required

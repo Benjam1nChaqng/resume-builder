@@ -134,10 +134,11 @@ Priority meanings:
 
 ### Product completeness
 
-- [ ] Add search-profile duplication for setting up a friend quickly.
-- [ ] Add candidate notes and consent/provenance fields for friend-managed profiles.
+- [ ] Add saved-search duplication for quickly testing another role or location.
+- [x] Keep saved searches private to the authenticated account with no friend-managed profiles or collaboration.
 - [ ] Add a job pipeline board for saved, tailored, applied, interviewing, offered, and closed.
 - [ ] Add application notes, contacts, follow-up dates, and source attribution.
+- [ ] Add job-specific outreach drafts and a user-approved email handoff.
 - [ ] Add resume version labels and comparison between base and tailored copies.
 - [ ] Add DOCX export after the PDF path is stable.
 - [ ] Add accessibility checks for forms, focus, labels, contrast, and keyboard workflows.
@@ -181,7 +182,7 @@ Priority meanings:
 
 ## P3: Production And Business Readiness
 
-- [ ] Define data retention, account deletion, export, and friend-data consent policies.
+- [ ] Define data retention, account deletion, and user data export policies.
 - [ ] Encrypt or minimize sensitive candidate data beyond baseline platform controls.
 - [ ] Complete a threat model for uploads, scraping, prompts, private URLs, and generated files.
 - [ ] Add dependency, secret, and code security scanning in CI.

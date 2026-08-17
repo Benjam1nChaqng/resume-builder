@@ -13,7 +13,7 @@ export function JobSearchProfileSelector({
   const [isPending, startTransition] = useTransition();
   return (
     <select
-      aria-label="Search profile"
+      aria-label="Saved search"
       value={selectedId}
       disabled={isPending}
       onChange={(event) => {

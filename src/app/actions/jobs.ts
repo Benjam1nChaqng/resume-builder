@@ -208,7 +208,7 @@ export async function createJobSearchProfileAction(
   } catch {
     return {
       ...EMPTY_DISCOVERY_FORM_STATE,
-      formError: "Unable to create this search profile right now.",
+      formError: "Unable to create this saved search right now.",
       values,
     };
   }
@@ -226,7 +226,7 @@ export async function updateJobSearchProfileAction(
   if (typeof profileId !== "string" || !profileId) {
     return {
       ...EMPTY_DISCOVERY_FORM_STATE,
-      formError: "The selected search profile is no longer available.",
+      formError: "The selected saved search is no longer available.",
       values,
       submitted: true,
     };
@@ -251,7 +251,7 @@ export async function updateJobSearchProfileAction(
     return {
       ...EMPTY_DISCOVERY_FORM_STATE,
       formError: missing
-        ? "The selected search profile is no longer available."
+        ? "The selected saved search is no longer available."
         : "Unable to save these search criteria right now.",
       values,
       submitted: true,
@@ -312,7 +312,7 @@ export async function createJobSourceAction(
     if (message.includes("already added")) {
       return {
         ...EMPTY_DISCOVERY_FORM_STATE,
-        formError: "This source is already added to the profile.",
+        formError: "This source is already added to the saved search.",
         values,
       };
     }
@@ -326,7 +326,7 @@ export async function createJobSourceAction(
     if (message.includes("profile not found")) {
       return {
         ...EMPTY_DISCOVERY_FORM_STATE,
-        formError: "The selected search profile is no longer available.",
+        formError: "The selected saved search is no longer available.",
         values,
       };
     }
@@ -393,7 +393,7 @@ export async function runJobDiscoveryAction(formData: FormData): Promise<void> {
   const userId = await requireSessionUserId();
   const profileId = formData.get("profileId");
   if (typeof profileId !== "string" || !profileId) {
-    throw new Error("Profile is required.");
+    throw new Error("Saved search is required.");
   }
   const result = await runJobDiscovery({ profileId, userId });
   redirect(

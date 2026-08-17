@@ -19,14 +19,14 @@ export function DeleteJobSearchProfileButton({
       className="w-full min-[380px]:w-auto"
       disabled={isPending}
       onClick={() => {
-        if (!window.confirm("Delete this search profile and its discovered listings?")) {
+        if (!window.confirm("Delete this saved search and its discovered listings?")) {
           return;
         }
         startTransition(() => deleteJobSearchProfileAction(profileId));
       }}
     >
       <Trash2 />
-      {isPending ? "Deleting" : "Delete profile"}
+      {isPending ? "Deleting" : "Delete search"}
     </Button>
   );
 }

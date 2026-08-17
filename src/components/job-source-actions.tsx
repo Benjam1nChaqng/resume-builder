@@ -111,7 +111,7 @@ export function JobSourceActions({
           <DialogHeader>
             <DialogTitle>Edit job source</DialogTitle>
             <DialogDescription>
-              Update the label or public career-page URL for this profile.
+              Update the label or public career-page URL for this saved search.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleUpdate} className="space-y-4">

@@ -95,10 +95,10 @@ export default async function JobDiscoverPage({
         <header className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-50">
-              Job discovery
+              Find jobs
             </h1>
             <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-              Manage searches for yourself or friends, then save the listings worth tailoring.
+              Save searches by role and location, then keep the listings worth applying to.
             </p>
           </div>
           <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end">
@@ -119,7 +119,7 @@ export default async function JobDiscoverPage({
           <aside className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>New search profile</CardTitle>
+                <CardTitle>New saved search</CardTitle>
               </CardHeader>
               <CardContent>
                 <JobSearchProfileCreateForm />
@@ -169,7 +169,7 @@ export default async function JobDiscoverPage({
           <section className="space-y-6">
             {profiles.length === 0 ? (
               <div className="rounded-lg border border-dashed border-neutral-300 px-6 py-16 text-center text-sm text-neutral-600 dark:border-neutral-800 dark:text-neutral-400">
-                Create a search profile to start collecting job links.
+                Create a saved search to start collecting job links.
               </div>
             ) : activeProfile ? (
                 <Card key={activeProfile.id}>
@@ -199,7 +199,7 @@ export default async function JobDiscoverPage({
                       <DiscoveryRunSummary run={activeProfile.runs[0]} />
                     )}
                     <details className="border-y border-neutral-200 py-3 dark:border-neutral-800">
-                      <summary className="cursor-pointer text-sm font-medium">Edit search criteria</summary>
+                      <summary className="cursor-pointer text-sm font-medium">Edit saved search</summary>
                       <JobSearchProfileUpdateForm profile={activeProfile} />
                     </details>
                     <nav
@@ -272,7 +272,7 @@ export default async function JobDiscoverPage({
                                     listing.postedAt.toLocaleDateString()
                                   : null,
                                 listing.matchScore > 0
-                                  ? `${listing.matchScore}% profile match`
+                                  ? `${listing.matchScore}% search match`
                                   : null,
                                 listing.status,
                               ]

@@ -15,7 +15,7 @@ export function getJobNotice(
   const count = safeCount(countValue);
   const notices: Record<string, JobNotice> = {
     "profile-created": {
-      message: "Search profile created.",
+      message: "Saved search created.",
       tone: "success",
     },
     "profile-updated": {
@@ -23,7 +23,7 @@ export function getJobNotice(
       tone: "success",
     },
     "profile-deleted": {
-      message: "Search profile deleted.",
+      message: "Saved search deleted.",
       tone: "success",
     },
     "source-added": { message: "Job source added.", tone: "success" },
