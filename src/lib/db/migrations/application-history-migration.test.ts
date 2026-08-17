@@ -8,8 +8,10 @@ describe("application history migration", () => {
       "utf8",
     );
 
-    expect(sql).toContain('ALTER TABLE "application" ADD COLUMN "notes" text');
-    expect(sql).toContain('CREATE TABLE "job_pipeline_event"');
+    expect(sql).toContain(
+      'ALTER TABLE "application" ADD COLUMN IF NOT EXISTS "notes" text',
+    );
+    expect(sql).toContain('CREATE TABLE IF NOT EXISTS "job_pipeline_event"');
     expect(sql).toContain('AFTER UPDATE OF "status" ON "job_listing"');
     expect(sql).toContain('OLD."status" IS DISTINCT FROM NEW."status"');
     expect(sql).toContain(

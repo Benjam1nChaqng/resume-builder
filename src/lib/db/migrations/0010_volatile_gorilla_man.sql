@@ -36,4 +36,4 @@ USING ranked_applications
 WHERE "application"."id" = ranked_applications."id"
 	AND ranked_applications.rank > 1;
 --> statement-breakpoint
-CREATE UNIQUE INDEX "application_user_job_unique" ON "application" USING btree ("user_id","job_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "application_user_job_unique" ON "application" USING btree ("user_id","job_id");

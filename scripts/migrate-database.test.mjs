@@ -39,12 +39,36 @@ describe("database migration safety", () => {
     );
   });
 
-  it("keeps the search-profile migration safe to resume", () => {
-    const sql = readFileSync(
-      resolve("src/lib/db/migrations/0013_colorful_mandrill.sql"),
-      "utf8",
-    );
+  it("keeps the production recovery migrations safe to resume", () => {
+    const migrationNames = [
+      "0004_motionless_mauler.sql",
+      "0005_pale_vanisher.sql",
+      "0006_dazzling_sentry.sql",
+      "0007_tired_iron_monger.sql",
+      "0008_hot_banshee.sql",
+      "0009_majestic_skin.sql",
+      "0010_volatile_gorilla_man.sql",
+      "0011_cute_warstar.sql",
+      "0012_complete_steve_rogers.sql",
+      "0013_colorful_mandrill.sql",
+    ];
+    const sql = migrationNames
+      .map((name) =>
+        readFileSync(resolve("src/lib/db/migrations", name), "utf8"),
+      )
+      .join("\n");
 
-    expect(sql.match(/ADD COLUMN IF NOT EXISTS/g)).toHaveLength(3);
+    expect(sql).not.toMatch(/ADD COLUMN "/);
+    expect(sql).not.toMatch(/CREATE (?:UNIQUE )?INDEX "/);
+    expect(sql).not.toMatch(/CREATE TABLE "/);
+    expect(sql).not.toMatch(/CREATE FUNCTION "/);
+
+    const addedConstraints = sql.match(/ADD CONSTRAINT/g) ?? [];
+    const droppedConstraints = sql.match(/DROP CONSTRAINT IF EXISTS/g) ?? [];
+    expect(droppedConstraints).toHaveLength(addedConstraints.length);
+
+    const createdTriggers = sql.match(/CREATE TRIGGER/g) ?? [];
+    const droppedTriggers = sql.match(/DROP TRIGGER IF EXISTS/g) ?? [];
+    expect(droppedTriggers).toHaveLength(createdTriggers.length);
   });
 });
