@@ -181,6 +181,9 @@ export async function getSearchProfileForDiscovery(
       targetRoles: jobSearchProfile.targetRoles,
       locationPreference: jobSearchProfile.locationPreference,
       remotePreference: jobSearchProfile.remotePreference,
+      employmentType: jobSearchProfile.employmentType,
+      salaryMin: jobSearchProfile.salaryMin,
+      jobFocus: jobSearchProfile.jobFocus,
       experienceLevel: jobSearchProfile.experienceLevel,
       keywords: jobSearchProfile.keywords,
       exclusions: jobSearchProfile.exclusions,
@@ -225,7 +228,7 @@ export async function upsertDiscoveredListings({
   listings,
 }: {
   profileId: string;
-  sourceId: string;
+  sourceId: string | null;
   listings: DiscoveredListing[];
 }): Promise<number> {
   if (listings.length === 0) return 0;

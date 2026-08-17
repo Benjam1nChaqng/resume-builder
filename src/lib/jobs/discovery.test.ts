@@ -145,6 +145,9 @@ describe("job discovery helpers", () => {
     });
 
     expect(parsed.remotePreference).toBe("any");
+    expect(parsed.employmentType).toBe("any");
+    expect(parsed.salaryMin).toBeNull();
+    expect(parsed.jobFocus).toBe("both");
     expect(parsed.basicJobFilters.partTime).toBe(true);
   });
 

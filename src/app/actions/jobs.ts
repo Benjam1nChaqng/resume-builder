@@ -29,6 +29,7 @@ import {
   FIT_CHECK_FAILURE_MESSAGE,
   runResumeJobFit,
 } from "@/lib/jobs/fit";
+import { draftEmailForJob } from "@/lib/jobs/email";
 import { runJobDiscovery } from "@/lib/jobs/run-discovery";
 import { saveDiscoveredListingForUser } from "@/lib/jobs/save-listing";
 import {
@@ -106,6 +107,10 @@ export async function tailorResumeForJobAction(
   return tailorResumeForJob({ jobId, resumeId });
 }
 
+export async function draftJobEmailAction(jobId: string, resumeId: string) {
+  return draftEmailForJob({ jobId, resumeId });
+}
+
 async function requireSessionUserId(): Promise<string> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/sign-in");
@@ -134,6 +139,9 @@ const PROFILE_FORM_FIELDS = [
   "targetRoles",
   "locationPreference",
   "remotePreference",
+  "employmentType",
+  "salaryMin",
+  "jobFocus",
   "experienceLevel",
   "keywords",
   "exclusions",
@@ -156,6 +164,13 @@ function searchProfileFormValue(formData: FormData) {
         ? formData.get("locationPreference")
         : null,
     remotePreference: formData.get("remotePreference") || "any",
+    employmentType: formData.get("employmentType") || "any",
+    salaryMin:
+      typeof formData.get("salaryMin") === "string" &&
+      String(formData.get("salaryMin")).trim()
+        ? Number(formData.get("salaryMin"))
+        : null,
+    jobFocus: formData.get("jobFocus") || "both",
     experienceLevel:
       typeof formData.get("experienceLevel") === "string"
         ? formData.get("experienceLevel")

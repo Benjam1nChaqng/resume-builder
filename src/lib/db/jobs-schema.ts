@@ -119,6 +119,9 @@ export const jobSearchProfile = pgTable(
     locationPreference: text("location_preference"),
     remotePreference: text("remote_preference").default("any").notNull(),
     experienceLevel: text("experience_level"),
+    employmentType: text("employment_type").default("any").notNull(),
+    salaryMin: integer("salary_min"),
+    jobFocus: text("job_focus").default("both").notNull(),
     keywords: jsonb("keywords")
       .$type<string[]>()
       .default(sql`'[]'::jsonb`)

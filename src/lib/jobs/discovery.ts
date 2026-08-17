@@ -19,6 +19,9 @@ export const JobSearchProfileInputSchema = z.object({
   targetRoles: z.array(z.string().trim().min(1)).min(1),
   locationPreference: z.string().trim().nullable().default(null),
   remotePreference: z.enum(["any", "remote", "hybrid", "onsite"]).default("any"),
+  employmentType: z.enum(["any", "full_time", "part_time"]).default("any"),
+  salaryMin: z.number().int().positive().nullable().default(null),
+  jobFocus: z.enum(["both", "local", "professional"]).default("both"),
   experienceLevel: z.string().trim().nullable().default(null),
   keywords: z.array(z.string().trim().min(1)).default([]),
   exclusions: z.array(z.string().trim().min(1)).default([]),
@@ -60,8 +63,40 @@ export const JobSourceInputSchema = JobSourceDetailsSchema.extend({
 export const JobSourceUpdateSchema = JobSourceDetailsSchema;
 
 export type JobSearchProfileInput = z.infer<typeof JobSearchProfileInputSchema>;
+export type SearchCriteria = {
+  roles: string[];
+  location: string | null;
+  employmentType: JobSearchProfileInput["employmentType"];
+  salaryMin: number | null;
+  jobFocus: JobSearchProfileInput["jobFocus"];
+};
 export type JobSourceInput = z.infer<typeof JobSourceInputSchema>;
 export type JobSourceUpdate = z.infer<typeof JobSourceUpdateSchema>;
+
+export function toSearchCriteria(
+  profile: {
+    targetRoles: string[];
+    locationPreference: string | null;
+    employmentType: string;
+    salaryMin: number | null;
+    jobFocus: string;
+  },
+): SearchCriteria {
+  return {
+    roles: profile.targetRoles,
+    location: profile.locationPreference,
+    employmentType:
+      profile.employmentType === "full_time" ||
+      profile.employmentType === "part_time"
+        ? profile.employmentType
+        : "any",
+    salaryMin: profile.salaryMin,
+    jobFocus:
+      profile.jobFocus === "local" || profile.jobFocus === "professional"
+        ? profile.jobFocus
+        : "both",
+  };
+}
 
 export type DiscoveredListing = {
   canonicalUrl: string;

@@ -1,5 +1,7 @@
 # Changelog
 
+- 2026-08-17: Merged one-click job-site searches, no-key remote listings, tailored application email drafting, preview-safe auth, and production-only deploy migrations into the private job pipeline.
+
 - 2026-08-17: Simplified job discovery into private saved searches and removed friend-managed workflow scope from the product UI and backlog.
 
 - 2026-08-17: Added repo-owned code, full-build, and runtime-aware MVP verification commands with secret-safe environment preflight checks.

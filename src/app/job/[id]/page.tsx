@@ -8,6 +8,7 @@ import { application, job, resumeJobFit } from "@/lib/db/jobs-schema";
 import { resume } from "@/lib/db/resume-schema";
 import { indexLatestFitsByResume } from "@/lib/jobs/fit-history";
 import { JobTailorPanel } from "@/components/job-tailor-panel";
+import { JobEmailPanel } from "@/components/job-email-panel";
 import {
   markJobAppliedAction,
   runResumeJobFitAction,
@@ -376,6 +377,10 @@ export default async function JobPage({
         </section>
 
         <JobTailorPanel jobId={jd.id} resumes={resumes} />
+
+        <div className="mt-12">
+          <JobEmailPanel jobId={jd.id} resumes={resumes} />
+        </div>
       </div>
     </main>
   );

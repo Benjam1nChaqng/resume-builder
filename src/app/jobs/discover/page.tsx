@@ -1,5 +1,5 @@
 import { cookies, headers } from "next/headers";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
@@ -27,6 +27,8 @@ import {
   createJobListingView,
   parseJobListingSort,
 } from "@/lib/jobs/listing-view";
+import { toSearchCriteria } from "@/lib/jobs/discovery";
+import { buildSearchLinks } from "@/lib/jobs/search-links";
 
 export default async function JobDiscoverPage({
   searchParams,
@@ -81,6 +83,9 @@ export default async function JobDiscoverPage({
     page: Number(requestedPage),
   });
   const visibleListings = listingView.items;
+  const searchLinks = activeProfile
+    ? buildSearchLinks(toSearchCriteria(activeProfile))
+    : [];
 
   return (
     <main className="min-h-screen bg-white px-3 py-8 sm:px-6 sm:py-12 dark:bg-neutral-950">
@@ -135,8 +140,8 @@ export default async function JobDiscoverPage({
                   <JobSourceCreateForm profileId={activeProfile.id} />
                   {activeProfile.sources.length === 0 ? (
                     <p className="mt-4 border-t border-neutral-200 pt-4 text-sm text-neutral-500 dark:border-neutral-800">
-                      Add a company career page or supported ATS board before
-                      running discovery.
+                      Company career pages are optional. Add one to include
+                      employers you care about in automatic discovery.
                     </p>
                   ) : (
                     <ul className="mt-4 divide-y divide-neutral-200 border-t border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
@@ -185,7 +190,10 @@ export default async function JobDiscoverPage({
                         <input type="hidden" name="profileId" value={activeProfile.id} />
                         <PendingSubmitButton
                           type="submit"
-                          disabled={activeProfile.sources.filter((source) => source.enabled).length === 0}
+                          disabled={
+                            activeProfile.jobFocus === "local" &&
+                            activeProfile.sources.filter((source) => source.enabled).length === 0
+                          }
                           pendingLabel="Discovering"
                           className="w-full sm:w-auto"
                         >
@@ -195,6 +203,25 @@ export default async function JobDiscoverPage({
                     </div>
                   </CardHeader>
                   <CardContent>
+                    <div className="mb-5">
+                      <p className="text-xs font-medium uppercase text-neutral-500">
+                        Search job sites
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {searchLinks.map((searchLink) => (
+                          <a
+                            key={searchLink.id}
+                            href={searchLink.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={buttonVariants({ variant: "outline", size: "sm" })}
+                          >
+                            {searchLink.label}
+                            <ExternalLink aria-hidden="true" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
                     {activeProfile.runs[0] && (
                       <DiscoveryRunSummary run={activeProfile.runs[0]} />
                     )}

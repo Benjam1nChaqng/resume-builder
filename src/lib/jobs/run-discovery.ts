@@ -16,6 +16,8 @@ import {
   attributeListingsToSourceCompany,
   discoverListingsFromSource,
 } from "./source-adapters";
+import { toSearchCriteria } from "./discovery";
+import { fetchJobFeed } from "./job-feed";
 
 const SOURCE_CONCURRENCY = 3;
 
@@ -27,13 +29,14 @@ export async function runJobDiscovery({
   userId: string;
 }, dependencies: {
   retry?: DiscoveryRetryOptions;
+  fetchFeed?: typeof fetchJobFeed;
 } = {}): Promise<{ discovered: number; errors: string[] }> {
   const [sources, profile] = await Promise.all([
     getEnabledSourcesForProfile(profileId, userId),
     getSearchProfileForDiscovery(profileId, userId),
   ]);
   const runId = await createDiscoveryRun(profileId);
-  const outcomes = await mapWithConcurrency(sources, SOURCE_CONCURRENCY, async (source) => {
+  const sourceOutcomes = await mapWithConcurrency(sources, SOURCE_CONCURRENCY, async (source) => {
     const startedAt = Date.now();
     try {
       const { value: rawListings, attempts } = await retryDiscoveryOperation(
@@ -71,6 +74,29 @@ export async function runJobDiscovery({
       };
     }
   });
+  const outcomes = [...sourceOutcomes];
+  if (profile.jobFocus !== "local") {
+    const startedAt = Date.now();
+    const feed = await (dependencies.fetchFeed ?? fetchJobFeed)(
+      toSearchCriteria(profile),
+    );
+    const listings = filterAndRankJobListings(feed.listings, profile);
+    const inserted = feed.error
+      ? 0
+      : await upsertDiscoveredListings({
+          profileId,
+          sourceId: null,
+          listings,
+        });
+    outcomes.push({
+      sourceId: "remotive",
+      label: "Remotive",
+      discovered: inserted,
+      attempts: 1,
+      durationMs: Date.now() - startedAt,
+      error: feed.error ? `Remotive: ${feed.error}` : null,
+    });
+  }
   const discovered = outcomes.reduce((total, outcome) => total + outcome.discovered, 0);
   const errors = outcomes
     .map((outcome) => outcome.error)
@@ -79,7 +105,7 @@ export async function runJobDiscovery({
   const status =
     errors.length === 0
       ? "completed"
-      : errors.length === sources.length && sources.length > 0
+      : errors.length === outcomes.length && outcomes.length > 0
         ? "failed"
         : "partial";
   await completeDiscoveryRun(

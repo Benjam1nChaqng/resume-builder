@@ -80,6 +80,42 @@ export function JobSearchProfileCreateForm() {
           defaultValue={state.values?.experienceLevel}
         />
       </div>
+      <div className="grid gap-3 min-[380px]:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="new-employmentType">Schedule</Label>
+          <select
+            id="new-employmentType"
+            name="employmentType"
+            defaultValue={state.values?.employmentType ?? "any"}
+            className="h-9 w-full rounded-md border border-neutral-200 bg-transparent px-3 text-sm dark:border-neutral-800"
+          >
+            <option value="any">Any</option>
+            <option value="full_time">Full-time</option>
+            <option value="part_time">Part-time</option>
+          </select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="new-jobFocus">Job type</Label>
+          <select
+            id="new-jobFocus"
+            name="jobFocus"
+            defaultValue={state.values?.jobFocus ?? "both"}
+            className="h-9 w-full rounded-md border border-neutral-200 bg-transparent px-3 text-sm dark:border-neutral-800"
+          >
+            <option value="both">All jobs</option>
+            <option value="local">Local and hourly</option>
+            <option value="professional">Professional</option>
+          </select>
+        </div>
+      </div>
+      <Field
+        name="salaryMin"
+        label="Minimum salary"
+        placeholder="60000"
+        error={state.fieldErrors.salaryMin?.[0]}
+        defaultValue={state.values?.salaryMin}
+        type="number"
+      />
       <Field
         name="keywords"
         label="Keywords"
@@ -129,6 +165,7 @@ function Field({
   error,
   defaultValue,
   required = false,
+  type = "text",
 }: {
   name: string;
   label: string;
@@ -136,6 +173,7 @@ function Field({
   error?: string;
   defaultValue?: string;
   required?: boolean;
+  type?: "text" | "number";
 }) {
   const id = `new-${name}`;
   const errorId = `${id}-error`;
@@ -145,6 +183,7 @@ function Field({
       <Input
         id={id}
         name={name}
+        type={type}
         placeholder={placeholder}
         defaultValue={defaultValue}
         required={required}

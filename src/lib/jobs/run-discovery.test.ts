@@ -7,6 +7,7 @@ const mockCompleteRun = vi.fn();
 const mockUpsertListings = vi.fn();
 const mockDiscoverListings = vi.fn();
 const mockAttributeListings = vi.fn();
+const mockFetchFeed = vi.fn();
 
 vi.mock("./discovery-repo", () => ({
   getEnabledSourcesForProfile: mockGetSources,
@@ -46,6 +47,9 @@ beforeEach(() => {
     targetRoles: ["warehouse associate"],
     locationPreference: null,
     remotePreference: "any",
+    employmentType: "any",
+    salaryMin: null,
+    jobFocus: "local",
     experienceLevel: "entry level",
     keywords: [],
     exclusions: [],
@@ -60,6 +64,7 @@ beforeEach(() => {
       internship: false,
     },
   });
+  mockFetchFeed.mockReset();
 });
 
 describe("runJobDiscovery", () => {
@@ -252,5 +257,65 @@ describe("runJobDiscovery", () => {
         }),
       ],
     });
+  });
+
+  it("discovers remote jobs from the no-key feed without configured sources", async () => {
+    mockGetSources.mockResolvedValueOnce([]);
+    mockGetProfile.mockResolvedValueOnce({
+      candidateName: "Maya",
+      targetRoles: ["support technician"],
+      locationPreference: "California",
+      remotePreference: "any",
+      employmentType: "full_time",
+      salaryMin: 60_000,
+      jobFocus: "professional",
+      experienceLevel: "entry level",
+      keywords: [],
+      exclusions: [],
+      basicJobFilters: {
+        partTime: false,
+        hourly: false,
+        entryLevel: false,
+        retail: false,
+        admin: false,
+        service: false,
+        warehouse: false,
+        internship: false,
+      },
+    });
+    mockCreateRun.mockResolvedValueOnce("run-feed");
+    mockFetchFeed.mockResolvedValueOnce({
+      listings: [
+        {
+          canonicalUrl: "https://remotive.com/jobs/1",
+          title: "Support Technician",
+          company: "Acme",
+          location: "Remote",
+        },
+      ],
+      error: null,
+    });
+    mockUpsertListings.mockResolvedValueOnce(1);
+
+    const { runJobDiscovery } = await import("./run-discovery");
+    await expect(
+      runJobDiscovery(
+        { profileId: "profile-1", userId: "user-1" },
+        { fetchFeed: mockFetchFeed },
+      ),
+    ).resolves.toEqual({ discovered: 1, errors: [] });
+
+    expect(mockUpsertListings).toHaveBeenCalledWith({
+      profileId: "profile-1",
+      sourceId: null,
+      listings: [expect.objectContaining({ title: "Support Technician" })],
+    });
+    expect(mockCompleteRun).toHaveBeenCalledWith(
+      "run-feed",
+      "completed",
+      undefined,
+      1,
+      [expect.objectContaining({ sourceId: "remotive", inserted: 1 })],
+    );
   });
 });

@@ -33,6 +33,9 @@ type Profile = {
   targetRoles: string[];
   locationPreference: string | null;
   remotePreference: string;
+  employmentType: string;
+  salaryMin: number | null;
+  jobFocus: string;
   experienceLevel: string | null;
   keywords: string[];
   exclusions: string[];
@@ -93,6 +96,41 @@ export function JobSearchProfileUpdateForm({ profile }: { profile: Profile }) {
           <option value="onsite">Onsite</option>
         </select>
       </div>
+      <div className="space-y-2">
+        <Label htmlFor={`edit-${profile.id}-employmentType`}>Schedule</Label>
+        <select
+          id={`edit-${profile.id}-employmentType`}
+          name="employmentType"
+          defaultValue={value("employmentType", profile.employmentType)}
+          className="h-9 w-full rounded-md border border-neutral-200 bg-transparent px-3 text-sm dark:border-neutral-800"
+        >
+          <option value="any">Any</option>
+          <option value="full_time">Full-time</option>
+          <option value="part_time">Part-time</option>
+        </select>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor={`edit-${profile.id}-jobFocus`}>Job type</Label>
+        <select
+          id={`edit-${profile.id}-jobFocus`}
+          name="jobFocus"
+          defaultValue={value("jobFocus", profile.jobFocus)}
+          className="h-9 w-full rounded-md border border-neutral-200 bg-transparent px-3 text-sm dark:border-neutral-800"
+        >
+          <option value="both">All jobs</option>
+          <option value="local">Local and hourly</option>
+          <option value="professional">Professional</option>
+        </select>
+      </div>
+      <Field
+        profileId={profile.id}
+        name="salaryMin"
+        label="Minimum salary"
+        placeholder="60000"
+        defaultValue={value("salaryMin", profile.salaryMin?.toString() ?? "")}
+        error={state.fieldErrors.salaryMin?.[0]}
+        type="number"
+      />
       <Field
         profileId={profile.id}
         name="experienceLevel"
@@ -159,6 +197,7 @@ function Field({
   defaultValue,
   error,
   required = false,
+  type = "text",
 }: {
   profileId: string;
   name: string;
@@ -167,6 +206,7 @@ function Field({
   defaultValue: string;
   error?: string;
   required?: boolean;
+  type?: "text" | "number";
 }) {
   const id = `edit-${profileId}-${name}`;
   const errorId = `${id}-error`;
@@ -176,6 +216,7 @@ function Field({
       <Input
         id={id}
         name={name}
+        type={type}
         placeholder={placeholder}
         defaultValue={defaultValue}
         required={required}

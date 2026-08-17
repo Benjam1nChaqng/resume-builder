@@ -16,6 +16,7 @@ const mockJobSearchProfileSafeParse = vi.fn();
 const mockJobSourceSafeParse = vi.fn();
 const mockJobSourceUpdateSafeParse = vi.fn();
 const mockRunResumeJobFit = vi.fn();
+const mockDraftEmailForJob = vi.fn();
 const mockRequireProfileOwner = vi.fn();
 const mockCookieSet = vi.fn();
 const mockCookieGet = vi.fn();
@@ -81,6 +82,10 @@ vi.mock("@/lib/jobs/discovery-repo", () => ({
   requireProfileOwner: mockRequireProfileOwner,
 }));
 
+vi.mock("@/lib/jobs/email", () => ({
+  draftEmailForJob: mockDraftEmailForJob,
+}));
+
 vi.mock("@/lib/jobs/fit", () => ({
   FIT_CHECK_FAILURE_MESSAGE: "Fit check failed safely.",
   runResumeJobFit: mockRunResumeJobFit,
@@ -115,6 +120,7 @@ beforeEach(() => {
   mockJobSourceSafeParse.mockReset();
   mockJobSourceUpdateSafeParse.mockReset();
   mockRunResumeJobFit.mockReset();
+  mockDraftEmailForJob.mockReset();
   mockRequireProfileOwner.mockReset();
   mockCookieSet.mockReset();
   mockCookieGet.mockReset();
@@ -592,5 +598,24 @@ describe("runResumeJobFitAction", () => {
       runResumeJobFitAction("job-1", "resume-1"),
     ).rejects.toThrow(/database unavailable/);
     expect(mockRedirect).not.toHaveBeenCalled();
+  });
+});
+
+describe("draftJobEmailAction", () => {
+  it("delegates to the owned job and resume email service", async () => {
+    const draft = {
+      subject: "Application: Support Technician",
+      body: "Hello,\n\nMy resume is attached.\n\nThanks,\nBen",
+      candidateName: "Ben",
+      suggestedTo: null,
+    };
+    mockDraftEmailForJob.mockResolvedValueOnce(draft);
+
+    const { draftJobEmailAction } = await import("./jobs");
+    await expect(draftJobEmailAction("job-1", "resume-1")).resolves.toBe(draft);
+    expect(mockDraftEmailForJob).toHaveBeenCalledWith({
+      jobId: "job-1",
+      resumeId: "resume-1",
+    });
   });
 });
