@@ -5,10 +5,10 @@ import type {
   TailoredBullets,
 } from "./schema";
 
-const mockCreate = vi.fn();
+const mockGenerateStructured = vi.fn();
 
-vi.mock("@/lib/ai/anthropic", () => ({
-  getAnthropic: () => ({ messages: { create: mockCreate } }),
+vi.mock("@/lib/ai/openai", () => ({
+  generateStructured: mockGenerateStructured,
 }));
 
 const experience: TailorExperience = {
@@ -42,31 +42,13 @@ const tailoredOutput: TailoredBullets = {
   ],
 };
 
-const toolUseResponse = (input: unknown) => ({
-  id: "msg_1",
-  type: "message" as const,
-  role: "assistant" as const,
-  model: "claude-sonnet-4-6",
-  content: [
-    {
-      type: "tool_use" as const,
-      id: "toolu_1",
-      name: "tailor_bullets",
-      input,
-    },
-  ],
-  stop_reason: "tool_use" as const,
-  stop_sequence: null,
-  usage: { input_tokens: 100, output_tokens: 100 },
-});
-
 beforeEach(() => {
-  mockCreate.mockReset();
+  mockGenerateStructured.mockReset();
 });
 
 describe("tailorBullets", () => {
   it("returns tailored bullets matching the input bullet count on a valid response", async () => {
-    mockCreate.mockResolvedValueOnce(toolUseResponse(tailoredOutput));
+    mockGenerateStructured.mockResolvedValueOnce(tailoredOutput);
 
     const { tailorBullets } = await import("./index");
     const result = await tailorBullets({ experience, jobDescription });
@@ -77,58 +59,44 @@ describe("tailorBullets", () => {
       text: expect.any(String),
       rationale: expect.any(String),
     });
-    expect(mockCreate).toHaveBeenCalledOnce();
+    expect(mockGenerateStructured).toHaveBeenCalledOnce();
   });
 
-  it("uses the executor model (Sonnet 4.6) per CLAUDE.md model-tier convention", async () => {
-    mockCreate.mockResolvedValueOnce(toolUseResponse(tailoredOutput));
+  it("uses the cost-efficient GPT executor tier", async () => {
+    mockGenerateStructured.mockResolvedValueOnce(tailoredOutput);
 
     const { tailorBullets } = await import("./index");
     await tailorBullets({ experience, jobDescription });
 
-    expect(mockCreate.mock.calls[0][0].model).toBe("claude-sonnet-4-6");
+    expect(mockGenerateStructured.mock.calls[0][0].model).toBe("gpt-5.6-luna");
   });
 
-  it("forces tool_choice to tailor_bullets so Claude can't free-form respond", async () => {
-    mockCreate.mockResolvedValueOnce(toolUseResponse(tailoredOutput));
+  it("requests strict tailor_bullets structured output", async () => {
+    mockGenerateStructured.mockResolvedValueOnce(tailoredOutput);
 
     const { tailorBullets } = await import("./index");
     await tailorBullets({ experience, jobDescription });
 
-    expect(mockCreate.mock.calls[0][0].tool_choice).toEqual({
-      type: "tool",
-      name: "tailor_bullets",
+    expect(mockGenerateStructured.mock.calls[0][0]).toMatchObject({
+      schemaName: "tailor_bullets",
+      maxOutputTokens: 4096,
     });
   });
 
-  it("throws when Claude returns no tool_use block", async () => {
-    mockCreate.mockResolvedValueOnce({
-      id: "msg_1",
-      type: "message",
-      role: "assistant",
-      model: "claude-sonnet-4-6",
-      content: [{ type: "text", text: "I cannot tailor this." }],
-      stop_reason: "end_turn",
-      stop_sequence: null,
-      usage: { input_tokens: 10, output_tokens: 10 },
-    });
+  it("propagates a missing structured output error", async () => {
+    mockGenerateStructured.mockRejectedValueOnce(
+      new Error("OpenAI did not return valid structured output."),
+    );
 
     const { tailorBullets } = await import("./index");
     await expect(
       tailorBullets({ experience, jobDescription }),
-    ).rejects.toThrow(/tool_use/i);
+    ).rejects.toThrow(/structured output/i);
   });
 
-  it("throws when Claude's structured output fails Zod validation", async () => {
-    mockCreate.mockResolvedValueOnce(
-      toolUseResponse({
-        bullets: [
-          {
-            // Missing required text + rationale
-            originalText: "Built backend services in Go.",
-          },
-        ],
-      }),
+  it("propagates structured output validation failures", async () => {
+    mockGenerateStructured.mockRejectedValueOnce(
+      new Error("Invalid tailored bullet output"),
     );
 
     const { tailorBullets } = await import("./index");

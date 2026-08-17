@@ -120,7 +120,7 @@ describe("tailorResumeForJob", () => {
     });
   });
 
-  it("returns an empty experiences array when the resume has no experiences (no Claude calls)", async () => {
+  it("returns an empty experiences array when the resume has no experiences (no model calls)", async () => {
     mockRequireJobAccess.mockResolvedValueOnce({ userId: "user-1" });
     mockRequireResumeAccess.mockResolvedValueOnce({ userId: "user-1" });
     mockLoadJobForTailoring.mockResolvedValueOnce(jobFixture);
@@ -149,7 +149,7 @@ describe("tailorResumeForJob", () => {
     expect(mockLoadResumeForTailoring).not.toHaveBeenCalled();
   });
 
-  it("skips experiences with no bullets — no Claude call, no entry in output", async () => {
+  it("skips experiences with no bullets, model call, or output entry", async () => {
     mockRequireJobAccess.mockResolvedValueOnce({ userId: "user-1" });
     mockRequireResumeAccess.mockResolvedValueOnce({ userId: "user-1" });
     mockLoadJobForTailoring.mockResolvedValueOnce(jobFixture);

@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ParsedResume } from "./schema";
 
-const mockCreate = vi.fn();
+const mockGenerateStructured = vi.fn();
 const mockBlobGet = vi.fn();
 
-vi.mock("@/lib/ai/anthropic", () => ({
-  getAnthropic: () => ({ messages: { create: mockCreate } }),
+vi.mock("@/lib/ai/openai", () => ({
+  generateStructured: mockGenerateStructured,
 }));
 
 vi.mock("@vercel/blob", () => ({
@@ -49,32 +49,14 @@ const validResumeFixture: ParsedResume = {
   projects: [],
 };
 
-const toolUseResponse = (input: unknown) => ({
-  id: "msg_1",
-  type: "message" as const,
-  role: "assistant" as const,
-  model: "claude-opus-4-7",
-  content: [
-    {
-      type: "tool_use" as const,
-      id: "toolu_1",
-      name: "extract_resume",
-      input,
-    },
-  ],
-  stop_reason: "tool_use" as const,
-  stop_sequence: null,
-  usage: { input_tokens: 100, output_tokens: 100 },
-});
-
 beforeEach(() => {
-  mockCreate.mockReset();
+  mockGenerateStructured.mockReset();
   mockBlobGet.mockReset();
 });
 
 describe("importResume", () => {
-  it("returns parsed resume on a valid Claude tool_use response (text input)", async () => {
-    mockCreate.mockResolvedValueOnce(toolUseResponse(validResumeFixture));
+  it("returns a structured resume for text input", async () => {
+    mockGenerateStructured.mockResolvedValueOnce(validResumeFixture);
 
     const { importResume } = await import("./index");
     const result = await importResume({ kind: "text", content: "Jane Doe\nAcme, Senior Engineer..." });
@@ -83,13 +65,13 @@ describe("importResume", () => {
       title: "Software Engineer Resume",
       contactInfo: { fullName: "Jane Doe" },
     });
-    expect(mockCreate).toHaveBeenCalledOnce();
+    expect(mockGenerateStructured).toHaveBeenCalledOnce();
   });
 
-  it("fetches the PDF from private Blob storage and sends base64 bytes (not a URL) to Claude", async () => {
+  it("fetches the private PDF and sends base64 bytes instead of its Blob URL", async () => {
     const pdfBytes = new Uint8Array([1, 2, 3, 4]);
     mockBlobGet.mockResolvedValueOnce(fakeBlobResponse(pdfBytes));
-    mockCreate.mockResolvedValueOnce(toolUseResponse(validResumeFixture));
+    mockGenerateStructured.mockResolvedValueOnce(validResumeFixture);
 
     const { importResume } = await import("./index");
     await importResume({ kind: "pdf", pdfUrl: "https://blob.example.com/r.pdf" });
@@ -99,21 +81,21 @@ describe("importResume", () => {
       expect.objectContaining({ access: "private" }),
     );
 
-    const call = mockCreate.mock.calls[0][0];
-    const userContent = call.messages[0].content as Array<{
+    const call = mockGenerateStructured.mock.calls[0][0];
+    const userContent = call.input as Array<{
       type: string;
       text?: string;
-      source?: { type: string; media_type?: string; data?: string };
+      filename?: string;
+      file_data?: string;
     }>;
-    const doc = userContent.find((c) => c.type === "document");
+    const doc = userContent.find((c) => c.type === "input_file");
     expect(doc).toBeDefined();
-    expect(doc!.source).toEqual({
-      type: "base64",
-      media_type: "application/pdf",
-      data: Buffer.from(pdfBytes).toString("base64"),
+    expect(doc).toMatchObject({
+      filename: "resume.pdf",
+      file_data: `data:application/pdf;base64,${Buffer.from(pdfBytes).toString("base64")}`,
     });
-    const text = userContent.find((c) => c.type === "text");
-    expect(text?.text).toMatch(/extract_resume/);
+    const text = userContent.find((c) => c.type === "input_text");
+    expect(text?.text).toMatch(/structured format/i);
   });
 
   it("throws when the private Blob is not found (get returns null)", async () => {
@@ -123,52 +105,44 @@ describe("importResume", () => {
     await expect(
       importResume({ kind: "pdf", pdfUrl: "https://blob.example.com/missing.pdf" }),
     ).rejects.toThrow(/not found|blob/i);
-    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockGenerateStructured).not.toHaveBeenCalled();
   });
 
-  it("forces tool_choice to extract_resume so Claude can't free-form respond", async () => {
-    mockCreate.mockResolvedValueOnce(toolUseResponse(validResumeFixture));
+  it("requests strict extract_resume structured output", async () => {
+    mockGenerateStructured.mockResolvedValueOnce(validResumeFixture);
 
     const { importResume } = await import("./index");
     await importResume({ kind: "text", content: "x" });
 
-    expect(mockCreate.mock.calls[0][0].tool_choice).toEqual({
-      type: "tool",
-      name: "extract_resume",
+    expect(mockGenerateStructured.mock.calls[0][0]).toMatchObject({
+      schemaName: "extract_resume",
+      maxOutputTokens: 8192,
     });
   });
 
-  it("uses the planner model (Opus 4.7) per CLAUDE.md model-tier convention", async () => {
-    mockCreate.mockResolvedValueOnce(toolUseResponse(validResumeFixture));
+  it("uses the GPT planner tier", async () => {
+    mockGenerateStructured.mockResolvedValueOnce(validResumeFixture);
 
     const { importResume } = await import("./index");
     await importResume({ kind: "text", content: "x" });
 
-    expect(mockCreate.mock.calls[0][0].model).toBe("claude-opus-4-7");
+    expect(mockGenerateStructured.mock.calls[0][0].model).toBe("gpt-5.6-sol");
   });
 
-  it("throws when Claude returns no tool_use block", async () => {
-    mockCreate.mockResolvedValueOnce({
-      id: "msg_1",
-      type: "message",
-      role: "assistant",
-      model: "claude-opus-4-7",
-      content: [{ type: "text", text: "I cannot parse this." }],
-      stop_reason: "end_turn",
-      stop_sequence: null,
-      usage: { input_tokens: 10, output_tokens: 10 },
-    });
+  it("propagates a missing structured output error", async () => {
+    mockGenerateStructured.mockRejectedValueOnce(
+      new Error("OpenAI did not return valid structured output."),
+    );
 
     const { importResume } = await import("./index");
-    await expect(importResume({ kind: "text", content: "garbage" })).rejects.toThrow(/tool_use/i);
+    await expect(importResume({ kind: "text", content: "garbage" })).rejects.toThrow(
+      /structured output/i,
+    );
   });
 
-  it("throws when Claude's structured output fails Zod validation", async () => {
-    mockCreate.mockResolvedValueOnce(
-      toolUseResponse({
-        // Missing required title + contactInfo.fullName
-        contactInfo: {},
-      }),
+  it("propagates structured output validation failures", async () => {
+    mockGenerateStructured.mockRejectedValueOnce(
+      new Error("Invalid structured resume"),
     );
 
     const { importResume } = await import("./index");

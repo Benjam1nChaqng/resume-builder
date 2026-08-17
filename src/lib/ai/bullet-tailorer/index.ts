@@ -1,6 +1,5 @@
-import { z } from "zod";
-import { getAnthropic } from "@/lib/ai/anthropic";
 import { MODELS } from "@/lib/ai/models";
+import { generateStructured } from "@/lib/ai/openai";
 import {
   TailoredBulletsSchema,
   type TailorExperience,
@@ -28,9 +27,6 @@ export async function tailorBullets({
   experience,
   jobDescription,
 }: TailorInput): Promise<TailoredBullets> {
-  const anthropic = getAnthropic();
-  const inputSchema = z.toJSONSchema(TailoredBulletsSchema);
-
   const niceToHavesBlock = jobDescription.niceToHaves?.length
     ? `\nNice-to-haves:\n${jobDescription.niceToHaves.map((h) => `- ${h}`).join("\n")}`
     : "";
@@ -43,39 +39,15 @@ Experience: ${experience.role} at ${experience.company}
 Original bullets:
 ${experience.bullets.map((b, i) => `${i + 1}. ${b}`).join("\n")}
 
-Rewrite each bullet to align with the requirements above, then return them via the ${TOOL_NAME} tool. Preserve order and count.`;
+Rewrite each bullet to align with the requirements above. Preserve order and count.`;
 
-  const response = await anthropic.messages.create({
+  return generateStructured({
     model: MODELS.EXECUTOR,
-    max_tokens: 4096,
+    schema: TailoredBulletsSchema,
+    schemaName: TOOL_NAME,
     system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: [{ type: "text", text: userText }],
-      },
-    ],
-    tools: [
-      {
-        name: TOOL_NAME,
-        description:
-          "Return the JD-aligned rewrite of each input bullet, one for one, with a rationale per bullet.",
-        input_schema: inputSchema as never,
-      },
-    ],
-    tool_choice: { type: "tool", name: TOOL_NAME },
+    input: userText,
+    maxOutputTokens: 4096,
+    reasoningEffort: "low",
   });
-
-  const toolUse = response.content.find(
-    (block): block is Extract<typeof block, { type: "tool_use" }> =>
-      block.type === "tool_use" && block.name === TOOL_NAME,
-  );
-
-  if (!toolUse) {
-    throw new Error(
-      `BulletTailorer: Claude did not return a tool_use block for "${TOOL_NAME}". stop_reason=${response.stop_reason}`,
-    );
-  }
-
-  return TailoredBulletsSchema.parse(toolUse.input);
 }

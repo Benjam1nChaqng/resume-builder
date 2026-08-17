@@ -1,5 +1,7 @@
 # Changelog
 
+- 2026-08-17: Migrated every active AI agent from Anthropic to OpenAI Responses with GPT-5.6 tiered models, strict Zod output, private PDF input, and OpenAI-only runtime configuration.
+
 - 2026-08-17: Merged one-click job-site searches, no-key remote listings, tailored application email drafting, preview-safe auth, and production-only deploy migrations into the private job pipeline.
 
 - 2026-08-17: Simplified job discovery into private saved searches and removed friend-managed workflow scope from the product UI and backlog.

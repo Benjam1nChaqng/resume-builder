@@ -1,7 +1,9 @@
-import { z } from "zod";
 import { get } from "@vercel/blob";
-import { getAnthropic } from "@/lib/ai/anthropic";
 import { MODELS } from "@/lib/ai/models";
+import {
+  generateStructured,
+  type StructuredModelInput,
+} from "@/lib/ai/openai";
 import { ParsedResumeSchema, type ParsedResume } from "./schema";
 
 const TOOL_NAME = "extract_resume";
@@ -35,58 +37,34 @@ async function fetchPrivatePdfAsBase64(pdfUrl: string): Promise<string> {
 }
 
 export async function importResume(input: ImportInput): Promise<ParsedResume> {
-  const anthropic = getAnthropic();
-
-  const userContent =
+  const userContent: StructuredModelInput =
     input.kind === "pdf"
-      ? ([
+      ? [
           {
-            type: "document",
-            source: {
-              type: "base64",
-              media_type: "application/pdf",
-              data: await fetchPrivatePdfAsBase64(input.pdfUrl),
-            },
+            type: "input_file",
+            filename: "resume.pdf",
+            file_data: `data:application/pdf;base64,${await fetchPrivatePdfAsBase64(input.pdfUrl)}`,
+            detail: "low",
           },
           {
-            type: "text",
-            text: "Extract this resume into structured JSON via the extract_resume tool.",
+            type: "input_text",
+            text: "Extract this resume into the required structured format.",
           },
-        ] as const)
-      : ([
+        ]
+      : [
           {
-            type: "text",
-            text: `Extract this resume into structured JSON via the extract_resume tool.\n\n--- RESUME TEXT ---\n${input.content}`,
+            type: "input_text",
+            text: `Extract this resume into the required structured format.\n\n--- RESUME TEXT ---\n${input.content}`,
           },
-        ] as const);
+        ];
 
-  const inputSchema = z.toJSONSchema(ParsedResumeSchema);
-
-  const response = await anthropic.messages.create({
+  return generateStructured({
     model: MODELS.PLANNER,
-    max_tokens: 8192,
+    schema: ParsedResumeSchema,
+    schemaName: TOOL_NAME,
     system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: userContent as unknown as never }],
-    tools: [
-      {
-        name: TOOL_NAME,
-        description: "Return the structured resume data extracted from the user's input.",
-        input_schema: inputSchema as never,
-      },
-    ],
-    tool_choice: { type: "tool", name: TOOL_NAME },
+    input: userContent,
+    maxOutputTokens: 8192,
+    reasoningEffort: "low",
   });
-
-  const toolUse = response.content.find(
-    (block): block is Extract<typeof block, { type: "tool_use" }> =>
-      block.type === "tool_use" && block.name === TOOL_NAME,
-  );
-
-  if (!toolUse) {
-    throw new Error(
-      `ResumeImporter: Claude did not return a tool_use block for "${TOOL_NAME}". stop_reason=${response.stop_reason}`,
-    );
-  }
-
-  return ParsedResumeSchema.parse(toolUse.input);
 }

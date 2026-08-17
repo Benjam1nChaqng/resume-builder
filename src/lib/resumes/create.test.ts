@@ -93,7 +93,7 @@ describe("createResumeForUser", () => {
   });
 
   it("propagates importer errors without inserting", async () => {
-    mockImportResume.mockRejectedValueOnce(new Error("Claude is unavailable"));
+    mockImportResume.mockRejectedValueOnce(new Error("OpenAI is unavailable"));
 
     const { createResumeForUser } = await import("./create");
     await expect(
@@ -101,7 +101,7 @@ describe("createResumeForUser", () => {
         userId: "user-1",
         input: { kind: "text", content: "x" },
       }),
-    ).rejects.toThrow(/Claude is unavailable/);
+    ).rejects.toThrow(/OpenAI is unavailable/);
 
     expect(mockInsertResumeWithRelations).not.toHaveBeenCalled();
   });

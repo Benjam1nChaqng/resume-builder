@@ -1,6 +1,5 @@
-import { z } from "zod";
-import { getAnthropic } from "@/lib/ai/anthropic";
 import { MODELS } from "@/lib/ai/models";
+import { generateStructured } from "@/lib/ai/openai";
 import { JobEmailSchema, type JobEmail } from "./schema";
 
 const TOOL_NAME = "compose_job_email";
@@ -31,9 +30,6 @@ export async function draftJobEmail({
   resumeText,
   candidateName,
 }: DraftJobEmailInput): Promise<JobEmail> {
-  const anthropic = getAnthropic();
-  const inputSchema = z.toJSONSchema(JobEmailSchema);
-
   const userContent = [
     `Candidate name: ${candidateName || "(unknown)"}`,
     ``,
@@ -48,36 +44,18 @@ export async function draftJobEmail({
     `CANDIDATE RESUME`,
     resumeText,
     ``,
-    `Write the application email via the ${TOOL_NAME} tool.`,
+    `Write the application email in the required structured format.`,
   ]
     .filter((line) => line !== ``)
     .join("\n");
 
-  const response = await anthropic.messages.create({
+  return generateStructured({
     model: MODELS.PLANNER,
-    max_tokens: 1024,
+    schema: JobEmailSchema,
+    schemaName: TOOL_NAME,
     system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: [{ type: "text", text: userContent }] }],
-    tools: [
-      {
-        name: TOOL_NAME,
-        description: "Return the composed job-application email.",
-        input_schema: inputSchema as never,
-      },
-    ],
-    tool_choice: { type: "tool", name: TOOL_NAME },
+    input: userContent,
+    maxOutputTokens: 1024,
+    reasoningEffort: "low",
   });
-
-  const toolUse = response.content.find(
-    (block): block is Extract<typeof block, { type: "tool_use" }> =>
-      block.type === "tool_use" && block.name === TOOL_NAME,
-  );
-
-  if (!toolUse) {
-    throw new Error(
-      `EmailWriter: Claude did not return a tool_use block for "${TOOL_NAME}". stop_reason=${response.stop_reason}`,
-    );
-  }
-
-  return JobEmailSchema.parse(toolUse.input);
 }

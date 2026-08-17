@@ -1,6 +1,5 @@
-import { z } from "zod";
-import { getAnthropic } from "@/lib/ai/anthropic";
 import { MODELS } from "@/lib/ai/models";
+import { generateStructured } from "@/lib/ai/openai";
 import { fetchPublicHtml } from "@/lib/jobs/public-web";
 import { JobDescriptionSchema, type JobDescription } from "./schema";
 
@@ -26,45 +25,13 @@ export async function scrapeJobDescription({
       `JDScraper: fetch failed for ${url}: ${error instanceof Error ? error.message : "unknown error"}`,
     );
   });
-  const anthropic = getAnthropic();
-  const inputSchema = z.toJSONSchema(JobDescriptionSchema);
-
-  const claudeResponse = await anthropic.messages.create({
+  return generateStructured({
     model: MODELS.PLANNER,
-    max_tokens: 4096,
+    schema: JobDescriptionSchema,
+    schemaName: TOOL_NAME,
     system: SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: `Source URL: ${finalUrl}\n\nExtract the job description from this HTML via the ${TOOL_NAME} tool.\n\n--- HTML ---\n${html}`,
-          },
-        ],
-      },
-    ],
-    tools: [
-      {
-        name: TOOL_NAME,
-        description:
-          "Return the structured job description extracted from the page HTML.",
-        input_schema: inputSchema as never,
-      },
-    ],
-    tool_choice: { type: "tool", name: TOOL_NAME },
+    input: `Source URL: ${finalUrl}\n\nExtract the job description from this HTML.\n\n--- HTML ---\n${html}`,
+    maxOutputTokens: 4096,
+    reasoningEffort: "low",
   });
-
-  const toolUse = claudeResponse.content.find(
-    (block): block is Extract<typeof block, { type: "tool_use" }> =>
-      block.type === "tool_use" && block.name === TOOL_NAME,
-  );
-
-  if (!toolUse) {
-    throw new Error(
-      `JDScraper: Claude did not return a tool_use block for "${TOOL_NAME}". stop_reason=${claudeResponse.stop_reason}`,
-    );
-  }
-
-  return JobDescriptionSchema.parse(toolUse.input);
 }

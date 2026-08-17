@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { JobDescription } from "./schema";
 
-const mockCreate = vi.fn();
+const mockGenerateStructured = vi.fn();
 const mockFetchPublicHtml = vi.fn();
 
-vi.mock("@/lib/ai/anthropic", () => ({
-  getAnthropic: () => ({ messages: { create: mockCreate } }),
+vi.mock("@/lib/ai/openai", () => ({
+  generateStructured: mockGenerateStructured,
 }));
 
 vi.mock("@/lib/jobs/public-web", () => ({
@@ -24,36 +24,18 @@ const validJobFixture: JobDescription = {
   salaryMax: 220000,
 };
 
-const toolUseResponse = (input: unknown) => ({
-  id: "msg_1",
-  type: "message" as const,
-  role: "assistant" as const,
-  model: "claude-opus-4-7",
-  content: [
-    {
-      type: "tool_use" as const,
-      id: "toolu_1",
-      name: "extract_job_description",
-      input,
-    },
-  ],
-  stop_reason: "tool_use" as const,
-  stop_sequence: null,
-  usage: { input_tokens: 100, output_tokens: 100 },
-});
-
 beforeEach(() => {
-  mockCreate.mockReset();
+  mockGenerateStructured.mockReset();
   mockFetchPublicHtml.mockReset();
 });
 
 describe("scrapeJobDescription", () => {
-  it("returns parsed job description on a valid fetch + Claude response", async () => {
+  it("returns a parsed job description from fetched HTML", async () => {
     mockFetchPublicHtml.mockResolvedValueOnce({
       html: "<html>...</html>",
       finalUrl: "https://example.com/jobs/1",
     });
-    mockCreate.mockResolvedValueOnce(toolUseResponse(validJobFixture));
+    mockGenerateStructured.mockResolvedValueOnce(validJobFixture);
 
     const { scrapeJobDescription } = await import("./index");
     const result = await scrapeJobDescription({
@@ -66,7 +48,7 @@ describe("scrapeJobDescription", () => {
       requirements: ["5+ years TypeScript", "Experience with Next.js"],
     });
     expect(mockFetchPublicHtml).toHaveBeenCalledOnce();
-    expect(mockCreate).toHaveBeenCalledOnce();
+    expect(mockGenerateStructured).toHaveBeenCalledOnce();
   });
 
   it("throws with the status code when fetch returns non-200", async () => {
@@ -76,41 +58,31 @@ describe("scrapeJobDescription", () => {
     await expect(
       scrapeJobDescription({ url: "https://example.com/missing" }),
     ).rejects.toThrow(/404/);
-    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockGenerateStructured).not.toHaveBeenCalled();
   });
 
-  it("throws when Claude returns no tool_use block", async () => {
+  it("propagates a missing structured output error", async () => {
     mockFetchPublicHtml.mockResolvedValueOnce({
       html: "<html>x</html>",
       finalUrl: "https://example.com/jobs/1",
     });
-    mockCreate.mockResolvedValueOnce({
-      id: "msg_1",
-      type: "message",
-      role: "assistant",
-      model: "claude-opus-4-7",
-      content: [{ type: "text", text: "I cannot parse this." }],
-      stop_reason: "end_turn",
-      stop_sequence: null,
-      usage: { input_tokens: 10, output_tokens: 10 },
-    });
+    mockGenerateStructured.mockRejectedValueOnce(
+      new Error("OpenAI did not return valid structured output."),
+    );
 
     const { scrapeJobDescription } = await import("./index");
     await expect(
       scrapeJobDescription({ url: "https://example.com/jobs/1" }),
-    ).rejects.toThrow(/tool_use/i);
+    ).rejects.toThrow(/structured output/i);
   });
 
-  it("throws when Claude's structured output fails Zod validation", async () => {
+  it("propagates structured output validation failures", async () => {
     mockFetchPublicHtml.mockResolvedValueOnce({
       html: "<html>x</html>",
       finalUrl: "https://example.com/jobs/1",
     });
-    mockCreate.mockResolvedValueOnce(
-      toolUseResponse({
-        // Missing required title + company + description
-        location: "Remote",
-      }),
+    mockGenerateStructured.mockRejectedValueOnce(
+      new Error("Invalid structured job description"),
     );
 
     const { scrapeJobDescription } = await import("./index");
@@ -119,20 +91,20 @@ describe("scrapeJobDescription", () => {
     ).rejects.toThrow();
   });
 
-  it("uses Opus 4.7 and forces tool_choice to extract_job_description", async () => {
+  it("uses the GPT planner tier and job-description schema", async () => {
     mockFetchPublicHtml.mockResolvedValueOnce({
       html: "<html>x</html>",
       finalUrl: "https://example.com/jobs/1",
     });
-    mockCreate.mockResolvedValueOnce(toolUseResponse(validJobFixture));
+    mockGenerateStructured.mockResolvedValueOnce(validJobFixture);
 
     const { scrapeJobDescription } = await import("./index");
     await scrapeJobDescription({ url: "https://example.com/jobs/1" });
 
-    expect(mockCreate.mock.calls[0][0].model).toBe("claude-opus-4-7");
-    expect(mockCreate.mock.calls[0][0].tool_choice).toEqual({
-      type: "tool",
-      name: "extract_job_description",
+    expect(mockGenerateStructured.mock.calls[0][0]).toMatchObject({
+      model: "gpt-5.6-sol",
+      schemaName: "extract_job_description",
+      maxOutputTokens: 4096,
     });
   });
 });

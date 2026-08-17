@@ -20,7 +20,7 @@ function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" disabled={pending} className="w-full">
-      {pending ? "Parsing with Claude…" : label}
+      {pending ? "Parsing with GPT..." : label}
     </Button>
   );
 }
@@ -36,7 +36,7 @@ export function ImportResumeButton() {
           <DialogHeader>
             <DialogTitle>Import a resume</DialogTitle>
             <DialogDescription>
-              Upload a PDF or paste text. Claude Opus 4.7 extracts the structured fields.
+              Upload a PDF or paste text. GPT extracts the structured fields.
             </DialogDescription>
           </DialogHeader>
 

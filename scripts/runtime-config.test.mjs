@@ -7,8 +7,7 @@ import {
 const validEnvironment = {
   DATABASE_URL: "postgresql://example.com/resume_builder",
   BETTER_AUTH_SECRET: "a".repeat(32),
-  ANTHROPIC_API_KEY: "anthropic-test-key",
-  HELICONE_API_KEY: "helicone-test-key",
+  OPENAI_API_KEY: "openai-test-key",
   BLOB_READ_WRITE_TOKEN: "blob-test-token",
   BETTER_AUTH_URL: "http://localhost:3000",
   NEXT_PUBLIC_BETTER_AUTH_URL: "http://localhost:3000",
