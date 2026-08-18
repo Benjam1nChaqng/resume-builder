@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-18: Tightened ATS PDF spacing so dense one-page resumes do not leave a single line on a blank second page.
 - 2026-08-18: Added owner-authenticated structured resume ingestion so Codex can seed resumes without paid importer calls.
 - 2026-08-18: Fixed GPT resume imports by emitting OpenAI-compatible HTTP URL patterns instead of unsupported URI schema formats.
 - 2026-08-18: Added durable application tracking, versioned research and writing artifacts, and owner-only expiring approvals for exact email and application actions.
