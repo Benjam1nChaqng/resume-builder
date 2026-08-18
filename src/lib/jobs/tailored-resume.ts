@@ -303,7 +303,8 @@ export async function createTailoredResumeCopyForUser({
         .update(application)
         .set({
           resumeId: newResumeId,
-          status: sql`case when ${application.status} = 'applied' then 'applied' else 'tailored' end`,
+          status: sql`case when ${application.status} in ('ready_to_apply', 'approved', 'applied', 'interviewing', 'offered', 'rejected', 'withdrawn', 'closed') then ${application.status} else 'tailored' end`,
+          updatedAt: new Date(),
         })
         .where(eq(application.id, existing[0].id)),
     );

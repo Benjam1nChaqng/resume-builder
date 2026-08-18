@@ -12,6 +12,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
+import { agentAccessToken } from "./agent-schema";
 import { resume } from "./resume-schema";
 
 export const job = pgTable(
@@ -56,8 +57,15 @@ export const application = pgTable(
     }),
     status: text("status").default("draft").notNull(),
     notes: text("notes"),
-    appliedAt: timestamp("applied_at", { withTimezone: true })
+    contactName: text("contact_name"),
+    contactEmail: text("contact_email"),
+    sourceLabel: text("source_label"),
+    followUpAt: timestamp("follow_up_at", { withTimezone: true }),
+    appliedAt: timestamp("applied_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
+      .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [
@@ -66,7 +74,106 @@ export const application = pgTable(
     uniqueIndex("application_user_job_unique").on(table.userId, table.jobId),
     check(
       "application_status_check",
-      sql`${table.status} in ('draft', 'tailored', 'applied')`,
+      sql`${table.status} in ('draft', 'researched', 'needs_answers', 'tailored', 'ready_to_apply', 'approved', 'applied', 'interviewing', 'offered', 'rejected', 'withdrawn', 'closed')`,
+    ),
+  ],
+);
+
+export type ApplicationArtifactMetadata = Record<string, unknown>;
+
+export const applicationArtifact = pgTable(
+  "application_artifact",
+  {
+    id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    jobId: text("job_id")
+      .notNull()
+      .references(() => job.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    content: text("content").notNull(),
+    metadata: jsonb("metadata")
+      .$type<ApplicationArtifactMetadata>()
+      .default(sql`'{}'::jsonb`)
+      .notNull(),
+    sourceUrls: jsonb("source_urls")
+      .$type<string[]>()
+      .default(sql`'[]'::jsonb`)
+      .notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("application_artifact_user_job_idx").on(table.userId, table.jobId),
+    uniqueIndex("application_artifact_user_idempotency_unique").on(
+      table.userId,
+      table.idempotencyKey,
+    ),
+    check(
+      "application_artifact_kind_check",
+      sql`${table.kind} in ('research', 'outreach_email', 'cover_letter', 'application_answers', 'interview_prep')`,
+    ),
+  ],
+);
+
+export type ApplicationActionPayload = Record<string, unknown>;
+
+export const applicationActionRequest = pgTable(
+  "application_action_request",
+  {
+    id: text("id").primaryKey().$defaultFn(() => randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    jobId: text("job_id")
+      .notNull()
+      .references(() => job.id, { onDelete: "cascade" }),
+    artifactId: text("artifact_id").references(() => applicationArtifact.id, {
+      onDelete: "set null",
+    }),
+    action: text("action").notNull(),
+    status: text("status").default("pending").notNull(),
+    summary: text("summary").notNull(),
+    payload: jsonb("payload")
+      .$type<ApplicationActionPayload>()
+      .default(sql`'{}'::jsonb`)
+      .notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    claimedByTokenId: text("claimed_by_token_id").references(
+      () => agentAccessToken.id,
+      { onDelete: "set null" },
+    ),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    errorSummary: text("error_summary"),
+  },
+  (table) => [
+    index("application_action_request_user_status_idx").on(
+      table.userId,
+      table.status,
+    ),
+    index("application_action_request_job_idx").on(table.jobId),
+    uniqueIndex("application_action_request_user_idempotency_unique").on(
+      table.userId,
+      table.idempotencyKey,
+    ),
+    check(
+      "application_action_request_action_check",
+      sql`${table.action} in ('send_email', 'submit_application')`,
+    ),
+    check(
+      "application_action_request_status_check",
+      sql`${table.status} in ('pending', 'approved', 'rejected', 'expired', 'executing', 'completed', 'failed')`,
     ),
   ],
 );
@@ -277,7 +384,7 @@ export const jobPipelineEvent = pgTable(
     ),
     check(
       "job_pipeline_event_status_check",
-      sql`${table.status} in ('discovered', 'saved', 'rejected', 'tailored', 'applied')`,
+      sql`${table.status} in ('discovered', 'saved', 'rejected', 'researched', 'needs_answers', 'tailored', 'ready_to_apply', 'approved', 'applied', 'interviewing', 'offered', 'withdrawn', 'closed')`,
     ),
   ],
 );
@@ -342,6 +449,8 @@ export const resumeJobFit = pgTable(
 export const jobRelations = relations(job, ({ one, many }) => ({
   user: one(user, { fields: [job.userId], references: [user.id] }),
   applications: many(application),
+  artifacts: many(applicationArtifact),
+  actionRequests: many(applicationActionRequest),
 }));
 
 export const applicationRelations = relations(application, ({ one }) => ({
@@ -352,6 +461,43 @@ export const applicationRelations = relations(application, ({ one }) => ({
     references: [resume.id],
   }),
 }));
+
+export const applicationArtifactRelations = relations(
+  applicationArtifact,
+  ({ one, many }) => ({
+    user: one(user, {
+      fields: [applicationArtifact.userId],
+      references: [user.id],
+    }),
+    job: one(job, {
+      fields: [applicationArtifact.jobId],
+      references: [job.id],
+    }),
+    actionRequests: many(applicationActionRequest),
+  }),
+);
+
+export const applicationActionRequestRelations = relations(
+  applicationActionRequest,
+  ({ one }) => ({
+    user: one(user, {
+      fields: [applicationActionRequest.userId],
+      references: [user.id],
+    }),
+    job: one(job, {
+      fields: [applicationActionRequest.jobId],
+      references: [job.id],
+    }),
+    artifact: one(applicationArtifact, {
+      fields: [applicationActionRequest.artifactId],
+      references: [applicationArtifact.id],
+    }),
+    claimedByToken: one(agentAccessToken, {
+      fields: [applicationActionRequest.claimedByTokenId],
+      references: [agentAccessToken.id],
+    }),
+  }),
+);
 
 export const jobPipelineEventRelations = relations(
   jobPipelineEvent,

@@ -65,7 +65,7 @@ export async function saveAgentStructuredJob({
   }
 
   const applicationUpdate = {
-    status: sql`case when ${application.status} in ('tailored', 'applied') then ${application.status} else 'draft' end`,
+    status: sql`case when ${application.status} in ('needs_answers', 'tailored', 'ready_to_apply', 'approved', 'applied', 'interviewing', 'offered', 'rejected', 'withdrawn', 'closed') then ${application.status} else 'researched' end`,
     ...(input.researchNotes !== undefined
       ? { notes: input.researchNotes || null }
       : {}),
@@ -76,7 +76,7 @@ export async function saveAgentStructuredJob({
       id: randomUUID(),
       userId,
       jobId,
-      status: "draft",
+      status: "researched",
       notes: input.researchNotes || null,
     })
     .onConflictDoUpdate({

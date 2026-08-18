@@ -53,6 +53,14 @@ export function getJobNotice(
       message: "Tailored resume created. Review it or download the PDF below.",
       tone: "success",
     },
+    "action-approved": {
+      message: "Action approved for 30 minutes.",
+      tone: "success",
+    },
+    "action-rejected": {
+      message: "Action rejected. No external action was taken.",
+      tone: "success",
+    },
     applied: { message: "Application marked as applied.", tone: "success" },
   };
 

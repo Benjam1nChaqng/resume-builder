@@ -2,6 +2,8 @@ import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   application,
+  applicationActionRequest,
+  applicationArtifact,
   job,
   jobListing,
   jobSearchProfile,
@@ -9,7 +11,8 @@ import {
 import { resume } from "@/lib/db/resume-schema";
 
 export async function loadAgentContext(userId: string) {
-  const [resumes, profiles, jobs, listings] = await Promise.all([
+  const [resumes, profiles, jobs, listings, artifacts, actionRequests] =
+    await Promise.all([
     db.query.resume.findMany({
       where: eq(resume.userId, userId),
       orderBy: (cols, { desc }) => [desc(cols.updatedAt)],
@@ -53,7 +56,13 @@ export async function loadAgentContext(userId: string) {
         resumeId: application.resumeId,
         applicationStatus: application.status,
         applicationNotes: application.notes,
+        contactName: application.contactName,
+        contactEmail: application.contactEmail,
+        sourceLabel: application.sourceLabel,
+        followUpAt: application.followUpAt,
         appliedAt: application.appliedAt,
+        applicationCreatedAt: application.createdAt,
+        applicationUpdatedAt: application.updatedAt,
       })
       .from(job)
       .leftJoin(
@@ -86,6 +95,18 @@ export async function loadAgentContext(userId: string) {
       )
       .where(eq(jobSearchProfile.userId, userId))
       .orderBy(desc(jobListing.discoveredAt))
+      .limit(500),
+    db
+      .select()
+      .from(applicationArtifact)
+      .where(eq(applicationArtifact.userId, userId))
+      .orderBy(desc(applicationArtifact.createdAt))
+      .limit(500),
+    db
+      .select()
+      .from(applicationActionRequest)
+      .where(eq(applicationActionRequest.userId, userId))
+      .orderBy(desc(applicationActionRequest.createdAt))
       .limit(500),
   ]);
 
@@ -122,5 +143,7 @@ export async function loadAgentContext(userId: string) {
     })),
     jobs,
     listings,
+    applicationArtifacts: artifacts,
+    applicationActionRequests: actionRequests,
   };
 }

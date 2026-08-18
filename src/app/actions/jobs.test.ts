@@ -8,6 +8,12 @@ const mockCreateTailoredResumeCopy = vi.fn();
 const mockMarkJobApplied = vi.fn();
 const mockUpdateApplicationNotes = vi.fn();
 const mockApplicationNotesSafeParse = vi.fn();
+const mockApplicationDetailsSafeParse = vi.fn();
+const mockUpdateApplicationDetails = vi.fn();
+const mockApproveApplicationActionRequest = vi.fn();
+const mockRejectApplicationActionRequest = vi.fn();
+const mockQueueOutreachEmailSafeParse = vi.fn();
+const mockQueueOutreachEmail = vi.fn();
 const mockUpdateJobSource = vi.fn();
 const mockCreateJobSearchProfile = vi.fn();
 const mockUpdateJobSearchProfile = vi.fn();
@@ -61,6 +67,15 @@ vi.mock("@/lib/jobs/application-record", () => ({
   updateApplicationNotes: mockUpdateApplicationNotes,
 }));
 
+vi.mock("@/lib/jobs/application-workflow", () => ({
+  ApplicationDetailsInputSchema: { safeParse: mockApplicationDetailsSafeParse },
+  QueueOutreachEmailInputSchema: { safeParse: mockQueueOutreachEmailSafeParse },
+  updateApplicationDetailsForUser: mockUpdateApplicationDetails,
+  approveApplicationActionRequestForUser: mockApproveApplicationActionRequest,
+  rejectApplicationActionRequestForUser: mockRejectApplicationActionRequest,
+  queueOutreachEmailForUser: mockQueueOutreachEmail,
+}));
+
 vi.mock("@/lib/jobs/discovery", () => ({
   JobSearchProfileInputSchema: {
     parse: vi.fn((value) => value),
@@ -112,6 +127,12 @@ beforeEach(() => {
   mockMarkJobApplied.mockReset();
   mockUpdateApplicationNotes.mockReset();
   mockApplicationNotesSafeParse.mockReset();
+  mockApplicationDetailsSafeParse.mockReset();
+  mockUpdateApplicationDetails.mockReset();
+  mockApproveApplicationActionRequest.mockReset();
+  mockRejectApplicationActionRequest.mockReset();
+  mockQueueOutreachEmailSafeParse.mockReset();
+  mockQueueOutreachEmail.mockReset();
   mockUpdateJobSource.mockReset();
   mockCreateJobSearchProfile.mockReset();
   mockUpdateJobSearchProfile.mockReset();
@@ -616,6 +637,109 @@ describe("draftJobEmailAction", () => {
     expect(mockDraftEmailForJob).toHaveBeenCalledWith({
       jobId: "job-1",
       resumeId: "resume-1",
+    });
+  });
+});
+
+describe("application workflow owner actions", () => {
+  it("requires a signed-in owner before approving an agent request", async () => {
+    mockGetSession.mockResolvedValueOnce(null);
+
+    const { approveApplicationActionRequestAction } = await import("./jobs");
+    await expect(
+      approveApplicationActionRequestAction("job-1", "request-1"),
+    ).rejects.toThrow(/REDIRECT:\/sign-in/);
+    expect(mockApproveApplicationActionRequest).not.toHaveBeenCalled();
+  });
+
+  it("binds approval to the signed-in owner and returns to the job", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    mockApproveApplicationActionRequest.mockResolvedValueOnce({
+      id: "request-1",
+      status: "approved",
+    });
+
+    const { approveApplicationActionRequestAction } = await import("./jobs");
+    await expect(
+      approveApplicationActionRequestAction("job-1", "request-1"),
+    ).rejects.toThrow(
+      /REDIRECT:\/job\/job-1\?notice=action-approved/,
+    );
+    expect(mockApproveApplicationActionRequest).toHaveBeenCalledWith({
+      userId: "user-1",
+      requestId: "request-1",
+    });
+  });
+
+  it("saves application details under the signed-in owner", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    const parsed = {
+      status: "interviewing",
+      notes: "Panel next week",
+      contactName: "Recruiter",
+      contactEmail: "recruiter@example.com",
+      sourceLabel: "Referral",
+      followUpAt: new Date("2026-08-25T17:00:00.000Z"),
+    };
+    mockApplicationDetailsSafeParse.mockReturnValueOnce({
+      success: true,
+      data: parsed,
+    });
+    mockUpdateApplicationDetails.mockResolvedValueOnce({ id: "application-1" });
+    const formData = new FormData();
+    formData.set("status", "interviewing");
+    formData.set("notes", "Panel next week");
+    formData.set("contactName", "Recruiter");
+    formData.set("contactEmail", "recruiter@example.com");
+    formData.set("sourceLabel", "Referral");
+    formData.set("followUpAt", "2026-08-25");
+
+    const { updateApplicationDetailsAction } = await import("./jobs");
+    await expect(
+      updateApplicationDetailsAction(
+        "job-1",
+        { error: null, saved: false },
+        formData,
+      ),
+    ).resolves.toEqual({ error: null, saved: true });
+    expect(mockUpdateApplicationDetails).toHaveBeenCalledWith({
+      userId: "user-1",
+      jobId: "job-1",
+      input: parsed,
+    });
+  });
+
+  it("queues the exact edited email under the signed-in owner", async () => {
+    mockGetSession.mockResolvedValueOnce({ user: { id: "user-1" } });
+    const input = {
+      jobId: "job-1",
+      resumeId: "resume-1",
+      to: "recruiter@example.com",
+      subject: "Application",
+      body: "Reviewed message",
+    };
+    mockQueueOutreachEmailSafeParse.mockReturnValueOnce({
+      success: true,
+      data: input,
+    });
+    mockQueueOutreachEmail.mockResolvedValueOnce({
+      actionRequest: { id: "request-1" },
+      created: true,
+    });
+
+    const { queueOutreachEmailAction } = await import("./jobs");
+    await expect(
+      queueOutreachEmailAction(
+        "job-1",
+        "resume-1",
+        "recruiter@example.com",
+        "Application",
+        "Reviewed message",
+      ),
+    ).resolves.toEqual({ ok: true, requestId: "request-1", created: true });
+    expect(mockQueueOutreachEmail).toHaveBeenCalledWith({
+      userId: "user-1",
+      input,
     });
   });
 });

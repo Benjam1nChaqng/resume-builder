@@ -137,8 +137,8 @@ Priority meanings:
 - [ ] Add saved-search duplication for quickly testing another role or location.
 - [x] Keep saved searches private to the authenticated account with no friend-managed profiles or collaboration.
 - [ ] Add a job pipeline board for saved, tailored, applied, interviewing, offered, and closed.
-- [ ] Add application notes, contacts, follow-up dates, and source attribution.
-- [ ] Add job-specific outreach drafts and a user-approved email handoff.
+- [x] Add application notes, contacts, follow-up dates, and source attribution.
+- [x] Add job-specific outreach drafts and a user-approved email handoff.
 - [ ] Add resume version labels and comparison between base and tailored copies.
 - [ ] Add DOCX export after the PDF path is stable.
 - [ ] Add accessibility checks for forms, focus, labels, contrast, and keyboard workflows.
@@ -177,7 +177,8 @@ Priority meanings:
 - [ ] Separate planner, executor, reviewer, and policy-check roles with explicit contracts.
 - [ ] Add resumable workflow state and step-level idempotency.
 - [ ] Build a career-data MCP server with least-privilege tools.
-- [ ] Add dry-run and approval gates for external side effects.
+- [x] Add dry-run and approval gates for external side effects.
+- [x] Persist versioned research and writing artifacts plus frozen, expiring, single-claim email and application action requests.
 - [ ] Add trace replay for failed or low-scoring agent runs.
 - [ ] Add prompt and tool contract tests to CI.
 

@@ -16,8 +16,10 @@ import {
 import { PendingSubmitButton } from "@/components/pending-submit-button";
 import { ActionNotice } from "@/components/action-notice";
 import { ResumePdfDownloadLink } from "@/components/resume-pdf-download-link";
-import { ApplicationNotesForm } from "@/components/application-notes-form";
+import { ApplicationDetailsForm } from "@/components/application-details-form";
+import { ApplicationWorkspace } from "@/components/application-workspace";
 import { getJobPipelineHistoryForUser } from "@/lib/jobs/application-record";
+import { loadApplicationWorkspaceForUser } from "@/lib/jobs/application-workflow";
 
 type RouteParams = { id: string };
 
@@ -59,7 +61,7 @@ export default async function JobPage({
     .where(eq(resume.userId, session.user.id))
     .orderBy(desc(resume.updatedAt));
 
-  const [fits, applications, pipelineHistory] = await Promise.all([
+  const [fits, applications, pipelineHistory, applicationWorkspace] = await Promise.all([
     db
       .select()
       .from(resumeJobFit)
@@ -75,6 +77,10 @@ export default async function JobPage({
         resumeId: application.resumeId,
         status: application.status,
         notes: application.notes,
+        contactName: application.contactName,
+        contactEmail: application.contactEmail,
+        sourceLabel: application.sourceLabel,
+        followUpAt: application.followUpAt,
         appliedAt: application.appliedAt,
       })
       .from(application)
@@ -85,6 +91,10 @@ export default async function JobPage({
         ),
       ),
     getJobPipelineHistoryForUser({
+      jobId: jd.id,
+      userId: session.user.id,
+    }),
+    loadApplicationWorkspaceForUser({
       jobId: jd.id,
       userId: session.user.id,
     }),
@@ -245,7 +255,7 @@ export default async function JobPage({
           )}
 
           <div className="mt-4 flex items-center gap-3">
-            {applicationRecord?.status === "applied" ? (
+            {applicationRecord?.appliedAt ? (
               <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
                 Applied {applicationRecord.appliedAt.toLocaleDateString()}
               </p>
@@ -268,10 +278,10 @@ export default async function JobPage({
             )}
           </div>
 
-          <div className="mt-6 grid gap-6 border-t border-neutral-200 pt-6 dark:border-neutral-800 md:grid-cols-2">
-            <ApplicationNotesForm
+          <div className="mt-6 grid gap-8 border-t border-neutral-200 pt-6 dark:border-neutral-800 md:grid-cols-2">
+            <ApplicationDetailsForm
               jobId={jd.id}
-              notes={applicationRecord?.notes ?? null}
+              application={applicationRecord}
             />
             <div>
               <h3 className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
@@ -299,6 +309,15 @@ export default async function JobPage({
                 </p>
               )}
             </div>
+          </div>
+
+          <div className="mt-10 border-t border-neutral-200 pt-8 dark:border-neutral-800">
+            <ApplicationWorkspace
+              jobId={jd.id}
+              artifacts={applicationWorkspace.artifacts}
+              actionRequests={applicationWorkspace.actionRequests}
+              resumes={resumes}
+            />
           </div>
 
           {activeResume && !activeFit && (

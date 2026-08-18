@@ -18,8 +18,16 @@ export type JobPipelineStatus =
   | "discovered"
   | "saved"
   | "rejected"
+  | "researched"
+  | "needs_answers"
   | "tailored"
-  | "applied";
+  | "ready_to_apply"
+  | "approved"
+  | "applied"
+  | "interviewing"
+  | "offered"
+  | "withdrawn"
+  | "closed";
 
 export type JobPipelineHistoryItem = {
   id: string;

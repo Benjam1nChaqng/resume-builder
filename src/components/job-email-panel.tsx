@@ -1,8 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Copy, Mail, Sparkles } from "lucide-react";
-import { draftJobEmailAction } from "@/app/actions/jobs";
+import { useRouter } from "next/navigation";
+import { Copy, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  draftJobEmailAction,
+  queueOutreachEmailAction,
+} from "@/app/actions/jobs";
 import { gmailComposeUrl, mailtoUrl } from "@/lib/email/links";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,11 +28,15 @@ export function JobEmailPanel({
   const [drafted, setDrafted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [queueStatus, setQueueStatus] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isQueuePending, startQueueTransition] = useTransition();
+  const router = useRouter();
 
   function handleDraft() {
     setError(null);
     setCopied(false);
+    setQueueStatus(null);
     startTransition(async () => {
       try {
         const result = await draftJobEmailAction(jobId, resumeId);
@@ -51,6 +59,34 @@ export function JobEmailPanel({
     } catch {
       setError("Could not copy the email. Select the text and copy it manually.");
     }
+  }
+
+  function queueForApproval() {
+    setError(null);
+    setQueueStatus(null);
+    startQueueTransition(async () => {
+      try {
+        const result = await queueOutreachEmailAction(
+          jobId,
+          resumeId,
+          to,
+          subject,
+          body,
+        );
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+        setQueueStatus(
+          result.created
+            ? "Saved and queued for approval."
+            : "This exact email is already in the approval queue.",
+        );
+        router.refresh();
+      } catch {
+        setError("Could not save this email to the approval queue.");
+      }
+    });
   }
 
   if (resumes.length === 0) {
@@ -134,6 +170,16 @@ export function JobEmailPanel({
           </div>
 
           <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={queueForApproval}
+              disabled={
+                isQueuePending || !to.trim() || !subject.trim() || !body.trim()
+              }
+            >
+              <ShieldCheck aria-hidden="true" />
+              {isQueuePending ? "Queuing..." : "Queue for approval"}
+            </Button>
             <a
               href={gmailComposeUrl(draft)}
               target="_blank"
@@ -158,6 +204,11 @@ export function JobEmailPanel({
           <p className="text-xs text-neutral-400">
             Attach your tailored resume PDF before sending.
           </p>
+          {queueStatus ? (
+            <p role="status" className="text-xs text-emerald-700 dark:text-emerald-400">
+              {queueStatus}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </section>

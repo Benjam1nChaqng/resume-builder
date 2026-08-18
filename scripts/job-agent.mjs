@@ -10,6 +10,11 @@ function usage() {
   pnpm agent ingest-listings <input.json>
   pnpm agent save-job <input.json>
   pnpm agent tailor <input.json>
+  pnpm agent create-artifact <input.json>
+  pnpm agent request-action <input.json>
+  pnpm agent claim-action <request-id>
+  pnpm agent complete-action <request-id>
+  pnpm agent fail-action <request-id> <input.json>
   pnpm agent download-pdf <resume-id> [output.pdf]`);
 }
 
@@ -71,6 +76,8 @@ async function main() {
     "ingest-listings": "/api/agent/v1/listings",
     "save-job": "/api/agent/v1/jobs",
     tailor: "/api/agent/v1/tailored-resumes",
+    "create-artifact": "/api/agent/v1/application-artifacts",
+    "request-action": "/api/agent/v1/action-requests",
   };
   if (command in jsonCommands) {
     if (!first) throw new Error(`${command} requires an input JSON file.`);
@@ -78,6 +85,32 @@ async function main() {
       method: "POST",
       body: JSON.stringify(await jsonFile(first)),
     });
+    console.log(JSON.stringify(await response.json(), null, 2));
+    return;
+  }
+
+  if (command === "claim-action" || command === "complete-action") {
+    if (!first) throw new Error(`${command} requires an action request id.`);
+    const operation = command === "claim-action" ? "claim" : "complete";
+    const response = await request(
+      `/api/agent/v1/action-requests/${encodeURIComponent(first)}/${operation}`,
+      { method: "POST" },
+    );
+    console.log(JSON.stringify(await response.json(), null, 2));
+    return;
+  }
+
+  if (command === "fail-action") {
+    if (!first || !second) {
+      throw new Error("fail-action requires a request id and input JSON file.");
+    }
+    const response = await request(
+      `/api/agent/v1/action-requests/${encodeURIComponent(first)}/fail`,
+      {
+        method: "POST",
+        body: JSON.stringify(await jsonFile(second)),
+      },
+    );
     console.log(JSON.stringify(await response.json(), null, 2));
     return;
   }

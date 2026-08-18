@@ -10,6 +10,14 @@ import {
   updateApplicationNotes,
 } from "@/lib/jobs/application-record";
 import {
+  ApplicationDetailsInputSchema,
+  QueueOutreachEmailInputSchema,
+  approveApplicationActionRequestForUser,
+  queueOutreachEmailForUser,
+  rejectApplicationActionRequestForUser,
+  updateApplicationDetailsForUser,
+} from "@/lib/jobs/application-workflow";
+import {
   JobSearchProfileInputSchema,
   JobSourceInputSchema,
   JobSourceUpdateSchema,
@@ -57,6 +65,15 @@ export type ApplicationNotesFormState = {
   error: string | null;
   saved: boolean;
 };
+
+export type ApplicationDetailsFormState = {
+  error: string | null;
+  saved: boolean;
+};
+
+export type QueueOutreachEmailResult =
+  | { ok: true; requestId: string; created: boolean }
+  | { ok: false; error: string };
 
 const EMPTY_DISCOVERY_FORM_STATE: JobDiscoveryFormState = {
   fieldErrors: {},
@@ -505,4 +522,105 @@ export async function updateApplicationNotesAction(
   }
   await updateApplicationNotes({ jobId, notes: parsed.data });
   return { error: null, saved: true };
+}
+
+function nullableFormString(value: FormDataEntryValue | null): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function followUpDate(value: FormDataEntryValue | null): Date | null {
+  if (typeof value !== "string" || !value) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error("Choose a valid follow-up date.");
+  }
+  const parsed = new Date(`${value}T17:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error("Choose a valid follow-up date.");
+  }
+  return parsed;
+}
+
+export async function updateApplicationDetailsAction(
+  jobId: string,
+  _previousState: ApplicationDetailsFormState,
+  formData: FormData,
+): Promise<ApplicationDetailsFormState> {
+  const userId = await requireSessionUserId();
+  let followUpAt: Date | null;
+  try {
+    followUpAt = followUpDate(formData.get("followUpAt"));
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Check the follow-up date.",
+      saved: false,
+    };
+  }
+  const parsed = ApplicationDetailsInputSchema.safeParse({
+    status: formData.get("status"),
+    notes: nullableFormString(formData.get("notes")),
+    contactName: nullableFormString(formData.get("contactName")),
+    contactEmail: nullableFormString(formData.get("contactEmail")),
+    sourceLabel: nullableFormString(formData.get("sourceLabel")),
+    followUpAt,
+  });
+  if (!parsed.success) {
+    return {
+      error: parsed.error.issues[0]?.message ?? "Check the application details.",
+      saved: false,
+    };
+  }
+  await updateApplicationDetailsForUser({ userId, jobId, input: parsed.data });
+  return { error: null, saved: true };
+}
+
+export async function approveApplicationActionRequestAction(
+  jobId: string,
+  requestId: string,
+): Promise<void> {
+  const userId = await requireSessionUserId();
+  await approveApplicationActionRequestForUser({ userId, requestId });
+  redirect(`/job/${jobId}?notice=action-approved`);
+}
+
+export async function rejectApplicationActionRequestAction(
+  jobId: string,
+  requestId: string,
+): Promise<void> {
+  const userId = await requireSessionUserId();
+  await rejectApplicationActionRequestForUser({ userId, requestId });
+  redirect(`/job/${jobId}?notice=action-rejected`);
+}
+
+export async function queueOutreachEmailAction(
+  jobId: string,
+  resumeId: string,
+  to: string,
+  subject: string,
+  body: string,
+): Promise<QueueOutreachEmailResult> {
+  const userId = await requireSessionUserId();
+  const parsed = QueueOutreachEmailInputSchema.safeParse({
+    jobId,
+    resumeId,
+    to,
+    subject,
+    body,
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error:
+        parsed.error.issues[0]?.message ??
+        "Add a valid recipient, subject, and message.",
+    };
+  }
+  const result = await queueOutreachEmailForUser({
+    userId,
+    input: parsed.data,
+  });
+  return {
+    ok: true,
+    requestId: result.actionRequest.id,
+    created: result.created,
+  };
 }
