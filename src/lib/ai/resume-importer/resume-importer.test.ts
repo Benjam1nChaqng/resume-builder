@@ -61,6 +61,8 @@ describe("importResume", () => {
     const jsonSchema = JSON.stringify(z.toJSONSchema(ParsedResumeSchema));
 
     expect(jsonSchema).not.toContain('"format":"uri"');
+    expect(jsonSchema).not.toContain("(?=");
+    expect(jsonSchema).not.toContain("(?!");
     expect(jsonSchema).toContain('"pattern":"^https?:\\\\/\\\\/');
   });
 

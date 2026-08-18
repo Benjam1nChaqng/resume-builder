@@ -9,6 +9,9 @@ const dateString = z
 const absoluteHttpUrl = z
   .string()
   .regex(/^https?:\/\/\S+$/, "Link must be an absolute HTTP(S) URL");
+const emailAddress = z
+  .string()
+  .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Email must be valid");
 
 export const ContactLinkSchema = z.object({
   label: z.string().min(1),
@@ -51,7 +54,7 @@ export const ParsedProjectSchema = z.object({
 
 export const ParsedContactInfoSchema = z.object({
   fullName: z.string().min(1),
-  email: z.string().email().nullable().default(null),
+  email: emailAddress.nullable().default(null),
   phone: z.string().nullable().default(null),
   location: z.string().nullable().default(null),
   links: z.array(ContactLinkSchema).default([]),
