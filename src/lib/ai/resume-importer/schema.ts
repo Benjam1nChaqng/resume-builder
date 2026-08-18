@@ -5,9 +5,14 @@ const dateString = z
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD")
   .nullable();
 
+// OpenAI strict structured outputs reject JSON Schema's `format: uri`.
+const absoluteHttpUrl = z
+  .string()
+  .regex(/^https?:\/\/\S+$/, "Link must be an absolute HTTP(S) URL");
+
 export const ContactLinkSchema = z.object({
   label: z.string().min(1),
-  url: z.string().url(),
+  url: absoluteHttpUrl,
 });
 
 export const ParsedBulletSchema = z.object({
@@ -41,7 +46,7 @@ export const ParsedSkillSchema = z.object({
 export const ParsedProjectSchema = z.object({
   name: z.string().min(1),
   description: z.string().nullable().default(null),
-  link: z.string().url().nullable().default(null),
+  link: absoluteHttpUrl.nullable().default(null),
 });
 
 export const ParsedContactInfoSchema = z.object({

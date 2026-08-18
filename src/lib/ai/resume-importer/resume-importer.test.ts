@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import type { ParsedResume } from "./schema";
+import { ParsedResumeSchema } from "./schema";
 
 const mockGenerateStructured = vi.fn();
 const mockBlobGet = vi.fn();
@@ -55,6 +57,13 @@ beforeEach(() => {
 });
 
 describe("importResume", () => {
+  it("generates an OpenAI-compatible schema without the unsupported uri format", () => {
+    const jsonSchema = JSON.stringify(z.toJSONSchema(ParsedResumeSchema));
+
+    expect(jsonSchema).not.toContain('"format":"uri"');
+    expect(jsonSchema).toContain('"pattern":"^https?:\\\\/\\\\/');
+  });
+
   it("returns a structured resume for text input", async () => {
     mockGenerateStructured.mockResolvedValueOnce(validResumeFixture);
 

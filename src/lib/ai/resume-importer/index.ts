@@ -15,6 +15,7 @@ Rules:
 - Set "current" = true for ongoing roles and set endDate to null.
 - Group skills by category when obvious (e.g. "Languages", "Frameworks"); use category: null for ungrouped skills.
 - Preserve the user's wording in bullets verbatim. Do not rewrite or paraphrase.
+- Normalize links as absolute HTTP(S) URLs, including the https:// prefix.
 - If a field is unknown or absent in the source, use null (or [] for arrays). Never invent data.
 - Set "title" to a short label for the resume (e.g. "Software Engineer Resume" or the user's most recent role).`;
 
