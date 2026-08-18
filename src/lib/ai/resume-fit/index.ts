@@ -2,8 +2,9 @@ import { MODELS } from "@/lib/ai/models";
 import { generateStructured } from "@/lib/ai/openai";
 import { ResumeJobFitSchema, type ResumeJobFit } from "./schema";
 
+export { RESUME_FIT_RUBRIC_VERSION } from "./schema";
+
 const TOOL_NAME = "score_resume_fit";
-export const RESUME_FIT_RUBRIC_VERSION = "resume-fit-v2";
 
 const SYSTEM_PROMPT = `You are a rigorous resume-to-job fit reviewer.
 

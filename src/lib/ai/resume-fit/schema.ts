@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const RESUME_FIT_RUBRIC_VERSION = "resume-fit-v2";
+
 export const ResumeJobFitSchema = z.object({
   score: z.number().int().min(0).max(100),
   matchingEvidence: z

@@ -20,6 +20,7 @@ The local client loads `.env.local` without echoing the key:
 ```powershell
 pnpm agent context artifacts/agent-context.json
 pnpm agent save-resume artifacts/resume.json
+pnpm agent save-fit artifacts/fit.json
 pnpm agent ingest-listings artifacts/listings.json
 pnpm agent save-job artifacts/job.json
 pnpm agent tailor artifacts/tailoring.json
@@ -38,6 +39,8 @@ Every route requires `Authorization: Bearer <agent-key>`.
 | Method | Route | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/agent/v1/context` | Owned resumes, search profiles, queue, and listings |
+| `POST` | `/api/agent/v1/resumes` | Store an owner-scoped structured resume without an app-side LLM call |
+| `POST` | `/api/agent/v1/resume-fits` | Store an owner-scoped source-backed resume fit without an app-side LLM call |
 | `POST` | `/api/agent/v1/listings` | Canonicalize, filter, rank, deduplicate, and store listings |
 | `POST` | `/api/agent/v1/jobs` | Save a verified structured job without an app-side LLM call |
 | `POST` | `/api/agent/v1/tailored-resumes` | Create an owned job-specific resume copy from accepted bullet changes |

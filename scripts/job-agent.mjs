@@ -8,6 +8,7 @@ function usage() {
   console.error(`Usage:
   pnpm agent context [output.json]
   pnpm agent save-resume <input.json>
+  pnpm agent save-fit <input.json>
   pnpm agent ingest-listings <input.json>
   pnpm agent save-job <input.json>
   pnpm agent tailor <input.json>
@@ -75,6 +76,7 @@ async function main() {
 
   const jsonCommands = {
     "save-resume": "/api/agent/v1/resumes",
+    "save-fit": "/api/agent/v1/resume-fits",
     "ingest-listings": "/api/agent/v1/listings",
     "save-job": "/api/agent/v1/jobs",
     tailor: "/api/agent/v1/tailored-resumes",
