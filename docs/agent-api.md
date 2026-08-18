@@ -19,6 +19,7 @@ The local client loads `.env.local` without echoing the key:
 
 ```powershell
 pnpm agent context artifacts/agent-context.json
+pnpm agent save-resume artifacts/resume.json
 pnpm agent ingest-listings artifacts/listings.json
 pnpm agent save-job artifacts/job.json
 pnpm agent tailor artifacts/tailoring.json
