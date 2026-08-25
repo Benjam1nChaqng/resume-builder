@@ -186,7 +186,7 @@ function parseCompensationRange(value: string | null | undefined): CompensationR
   }
 
   const standaloneRange = new RegExp(
-    `^\\s*(?:(?:base|salary|pay|compensation|range)\\s*:?\\s*)?(${MONEY_TOKEN})(?:\\s*${RANGE_SEPARATOR}\\s*(${MONEY_TOKEN}))?\\s*$`,
+    `^\\s*(?:(?:base|salary|pay|compensation|range)\\s*:?\\s*)?(${MONEY_TOKEN})(?:\\s*${RANGE_SEPARATOR}\\s*(${MONEY_TOKEN}))?\\s*(?:usd)?\\s*$`,
     "i",
   ).exec(value);
   const minimum = parseMoneyToken(standaloneRange?.[1] ?? "");

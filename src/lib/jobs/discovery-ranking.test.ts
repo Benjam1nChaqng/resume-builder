@@ -254,6 +254,25 @@ describe("filterAndRankJobListings", () => {
     ]);
   });
 
+  it("treats a standalone range with a trailing USD code as confirmed pay", () => {
+    const ranked = filterAndRankJobListings(
+      [
+        {
+          canonicalUrl: "https://example.com/jobs/trailing-usd",
+          title: "Technical Support Engineer",
+          company: "Acme",
+          location: "San Francisco, CA",
+          compensationText: "$125,000 - $150,000 USD",
+        },
+      ],
+      baseProfile,
+      { minAnnualSalary: 80_000, minHourlySalary: 50 },
+    );
+
+    expect(ranked).toHaveLength(1);
+    expect(ranked[0]?.matchScore).toBeGreaterThanOrEqual(76);
+  });
+
   it("annualizes monthly USD compensation before applying the floor", () => {
     const ranked = filterAndRankJobListings(
       [

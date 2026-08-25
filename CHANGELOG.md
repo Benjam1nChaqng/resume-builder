@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-25: Fixed salary parsing for employer listings whose annual pay range ends with a USD currency code.
 - 2026-08-24: Added owner-scoped agent discovery and model fit runs with $80,000 annual and $50 hourly floors, stale-listing filtering, compensation-aware persisted ranking, and rediscovery metadata refresh.
 - 2026-08-18: Added owner-scoped Codex fit ingestion so source-backed resume checks work without paid model calls.
 - 2026-08-18: Tightened ATS PDF spacing so dense one-page resumes do not leave a single line on a blank second page.
