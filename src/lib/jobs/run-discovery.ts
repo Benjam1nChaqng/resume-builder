@@ -3,9 +3,13 @@ import {
   createDiscoveryRun,
   getEnabledSourcesForProfile,
   getSearchProfileForDiscovery,
+  refreshDisqualifiedListings,
   upsertDiscoveredListings,
 } from "./discovery-repo";
-import { filterAndRankJobListings } from "./discovery-ranking";
+import {
+  filterAndRankJobListings,
+  type DiscoveryRankingPolicy,
+} from "./discovery-ranking";
 import { mapWithConcurrency } from "./concurrency";
 import {
   DiscoveryRetryError,
@@ -21,16 +25,20 @@ import { fetchJobFeed } from "./job-feed";
 
 const SOURCE_CONCURRENCY = 3;
 
-export async function runJobDiscovery({
-  profileId,
-  userId,
-}: {
-  profileId: string;
-  userId: string;
-}, dependencies: {
-  retry?: DiscoveryRetryOptions;
-  fetchFeed?: typeof fetchJobFeed;
-} = {}): Promise<{ discovered: number; errors: string[] }> {
+export async function runJobDiscovery(
+  {
+    profileId,
+    userId,
+  }: {
+    profileId: string;
+    userId: string;
+  },
+  dependencies: {
+    retry?: DiscoveryRetryOptions;
+    fetchFeed?: typeof fetchJobFeed;
+  } = {},
+  rankingPolicy: DiscoveryRankingPolicy = {},
+): Promise<{ discovered: number; errors: string[] }> {
   const [sources, profile] = await Promise.all([
     getEnabledSourcesForProfile(profileId, userId),
     getSearchProfileForDiscovery(profileId, userId),
@@ -43,13 +51,27 @@ export async function runJobDiscovery({
         () => discoverListingsFromSource(source.url),
         dependencies.retry,
       );
-      const listings = filterAndRankJobListings(
-        attributeListingsToSourceCompany(rawListings, {
+      const attributedListings = attributeListingsToSourceCompany(rawListings, {
           sourceUrl: source.url,
           sourceLabel: source.label,
-        }),
+        });
+      const listings = filterAndRankJobListings(
+        attributedListings,
         profile,
+        rankingPolicy,
       );
+      const acceptedUrls = new Set(
+        listings.map((listing) => listing.canonicalUrl),
+      );
+      const disqualifiedListings = attributedListings
+        .filter((listing) => !acceptedUrls.has(listing.canonicalUrl))
+        .map((listing) => ({ ...listing, matchScore: 0 }));
+      if (disqualifiedListings.length > 0) {
+        await refreshDisqualifiedListings({
+          profileId,
+          listings: disqualifiedListings,
+        });
+      }
       const discovered = await upsertDiscoveredListings({
         profileId,
         sourceId: source.id,
@@ -80,7 +102,23 @@ export async function runJobDiscovery({
     const feed = await (dependencies.fetchFeed ?? fetchJobFeed)(
       toSearchCriteria(profile),
     );
-    const listings = filterAndRankJobListings(feed.listings, profile);
+    const listings = filterAndRankJobListings(
+      feed.listings,
+      profile,
+      rankingPolicy,
+    );
+    const acceptedUrls = new Set(
+      listings.map((listing) => listing.canonicalUrl),
+    );
+    const disqualifiedListings = feed.listings
+      .filter((listing) => !acceptedUrls.has(listing.canonicalUrl))
+      .map((listing) => ({ ...listing, matchScore: 0 }));
+    if (!feed.error && disqualifiedListings.length > 0) {
+      await refreshDisqualifiedListings({
+        profileId,
+        listings: disqualifiedListings,
+      });
+    }
     const inserted = feed.error
       ? 0
       : await upsertDiscoveredListings({

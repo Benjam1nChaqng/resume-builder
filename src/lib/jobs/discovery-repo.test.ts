@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createJobSourceForUser,
+  refreshDisqualifiedListings,
   setJobSourceEnabledForUser,
   upsertDiscoveredListings,
   updateListingStatusForUser,
@@ -21,6 +22,9 @@ const {
   mockUpdateWhere,
   mockUpdateReturning,
   mockUpdate,
+  mockBatch,
+  mockDelete,
+  mockDeleteWhere,
   mockAssertPublicHttpUrl,
 } = vi.hoisted(() => {
   const mockLimit = vi.fn();
@@ -36,6 +40,9 @@ const {
   const mockUpdateWhere = vi.fn(() => ({ returning: mockUpdateReturning }));
   const mockSet = vi.fn(() => ({ where: mockUpdateWhere }));
   const mockUpdate = vi.fn(() => ({ set: mockSet }));
+  const mockBatch = vi.fn();
+  const mockDeleteWhere = vi.fn();
+  const mockDelete = vi.fn(() => ({ where: mockDeleteWhere }));
   const mockAssertPublicHttpUrl = vi.fn();
   return {
     mockLimit,
@@ -51,6 +58,9 @@ const {
     mockUpdateWhere,
     mockUpdateReturning,
     mockUpdate,
+    mockBatch,
+    mockDelete,
+    mockDeleteWhere,
     mockAssertPublicHttpUrl,
   };
 });
@@ -60,12 +70,21 @@ vi.mock("@/lib/db", () => ({
     select: mockSelect,
     insert: mockInsert,
     update: mockUpdate,
+    delete: mockDelete,
+    batch: mockBatch,
   },
 }));
 
 vi.mock("./public-web", () => ({
   assertPublicHttpUrl: mockAssertPublicHttpUrl,
 }));
+
+function collectStrings(value: unknown, seen = new WeakSet<object>()): string[] {
+  if (typeof value === "string") return [value];
+  if (!value || typeof value !== "object" || seen.has(value)) return [];
+  seen.add(value);
+  return Object.values(value).flatMap((entry) => collectStrings(entry, seen));
+}
 
 beforeEach(() => {
   mockLimit.mockReset();
@@ -82,6 +101,10 @@ beforeEach(() => {
   mockUpdateWhere.mockImplementation(() => ({ returning: mockUpdateReturning }));
   mockUpdateReturning.mockReset();
   mockUpdate.mockClear();
+  mockBatch.mockReset();
+  mockDelete.mockClear();
+  mockDeleteWhere.mockReset();
+  mockDeleteWhere.mockImplementation(() => ({}));
   mockAssertPublicHttpUrl.mockReset();
 });
 
@@ -301,6 +324,111 @@ describe("upsertDiscoveredListings", () => {
           fingerprint: expect.any(String),
         }),
       ]),
+    );
+  });
+
+  it("refreshes ranking metadata when a known URL is discovered again", async () => {
+    mockReturning.mockResolvedValueOnce([]);
+    mockBatch.mockResolvedValueOnce([]);
+
+    await expect(
+      upsertDiscoveredListings({
+        profileId: "profile-1",
+        sourceId: null,
+        listings: [
+          {
+            canonicalUrl: "https://remotive.com/jobs/support-1",
+            title: "Technical Support Engineer",
+            company: "Acme",
+            location: "Remote | Full-time",
+            employmentType: "full_time",
+            compensationText: "$95,000 - $110,000",
+            postedAt: new Date("2026-08-20T12:00:00Z"),
+            matchScore: 88,
+          },
+        ],
+      }),
+    ).resolves.toBe(0);
+
+    expect(mockBatch).toHaveBeenCalledOnce();
+    expect(mockSet).toHaveBeenCalledWith({
+      fingerprint: expect.anything(),
+      title: "Technical Support Engineer",
+      company: "Acme",
+      location: "Remote | Full-time",
+      employmentType: "full_time",
+      compensationText: "$95,000 - $110,000",
+      postedAt: new Date("2026-08-20T12:00:00Z"),
+      matchScore: 88,
+    });
+  });
+
+  it("clears stale nullable metadata when the current source omits it", async () => {
+    mockReturning.mockResolvedValueOnce([]);
+    mockBatch.mockResolvedValueOnce([]);
+
+    await upsertDiscoveredListings({
+      profileId: "profile-1",
+      sourceId: "source-1",
+      listings: [
+        {
+          canonicalUrl: "https://acme.example/jobs/support-1",
+          title: "Technical Support Engineer",
+          company: null,
+          location: null,
+          employmentType: null,
+          compensationText: null,
+          postedAt: null,
+          matchScore: 25,
+        },
+      ],
+    });
+
+    expect(mockSet).toHaveBeenCalledWith({
+      title: "Technical Support Engineer",
+      company: null,
+      location: null,
+      employmentType: null,
+      compensationText: null,
+      postedAt: null,
+      matchScore: 25,
+    });
+  });
+});
+
+describe("refreshDisqualifiedListings", () => {
+  it("refreshes known rows without inserting a new disqualified listing", async () => {
+    mockBatch.mockResolvedValueOnce([]);
+
+    await refreshDisqualifiedListings({
+      profileId: "profile-1",
+      listings: [
+        {
+          canonicalUrl: "https://acme.example/jobs/under-floor",
+          title: "Technical Support Engineer",
+          company: "Acme",
+          location: "Remote",
+          compensationText: "$70,000 per year",
+          matchScore: 0,
+        },
+      ],
+    });
+
+    expect(mockInsert).not.toHaveBeenCalled();
+    expect(mockDelete).toHaveBeenCalledOnce();
+    expect(collectStrings(mockDeleteWhere.mock.calls[0]?.[0]).join(" ")).toContain(
+      "not exists (select 1 from \"job_pipeline_event\"",
+    );
+    expect(mockBatch).toHaveBeenCalledOnce();
+    expect(mockSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fingerprint: expect.anything(),
+        compensationText: "$70,000 per year",
+        matchScore: 0,
+      }),
+    );
+    expect(mockSet).not.toHaveBeenCalledWith(
+      expect.objectContaining({ status: expect.anything() }),
     );
   });
 });

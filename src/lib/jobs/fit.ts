@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   analyzeResumeFit,
   RESUME_FIT_RUBRIC_VERSION,
@@ -29,10 +29,28 @@ export async function runResumeJobFit({
   if (jobAccess.userId !== resumeAccess.userId) {
     throw new Error("Job and resume owners do not match.");
   }
-  const { userId } = jobAccess;
+  return runResumeJobFitForUser({
+    userId: jobAccess.userId,
+    jobId,
+    resumeId,
+  });
+}
 
-  const [jobRow] = await db.select().from(job).where(eq(job.id, jobId)).limit(1);
-  const resumeData = await loadRenderableResume(resumeId);
+export async function runResumeJobFitForUser({
+  userId,
+  jobId,
+  resumeId,
+}: {
+  userId: string;
+  jobId: string;
+  resumeId: string;
+}): Promise<string> {
+  const [jobRow] = await db
+    .select()
+    .from(job)
+    .where(and(eq(job.id, jobId), eq(job.userId, userId)))
+    .limit(1);
+  const resumeData = await loadRenderableResume(resumeId, userId);
   if (!jobRow) throw new Error("Job not found.");
   if (!resumeData) throw new Error("Resume not found.");
 

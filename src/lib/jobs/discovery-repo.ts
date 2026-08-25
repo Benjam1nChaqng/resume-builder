@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { db } from "@/lib/db";
 import {
   jobDiscoveryRun,
@@ -232,26 +233,139 @@ export async function upsertDiscoveredListings({
   listings: DiscoveredListing[];
 }): Promise<number> {
   if (listings.length === 0) return 0;
+  const rows = listings.map((listing) => ({
+    profileId,
+    sourceId,
+    canonicalUrl: listing.canonicalUrl,
+    fingerprint: buildJobListingFingerprint(listing),
+    title: listing.title,
+    company: listing.company,
+    location: listing.location,
+    employmentType: listing.employmentType ?? null,
+    compensationText: listing.compensationText ?? null,
+    postedAt: listing.postedAt ?? null,
+    matchScore: listing.matchScore ?? 0,
+  }));
+  await refreshListingRows(profileId, rows);
   const inserted = await db
     .insert(jobListing)
-    .values(
-      listings.map((listing) => ({
-        profileId,
-        sourceId,
-        canonicalUrl: listing.canonicalUrl,
-        fingerprint: buildJobListingFingerprint(listing),
-        title: listing.title,
-        company: listing.company,
-        location: listing.location,
-        employmentType: listing.employmentType ?? null,
-        compensationText: listing.compensationText ?? null,
-        postedAt: listing.postedAt ?? null,
-        matchScore: listing.matchScore ?? 0,
-      })),
-    )
+    .values(rows)
     .onConflictDoNothing()
     .returning({ id: jobListing.id });
+
   return inserted.length;
+}
+
+export async function refreshDisqualifiedListings({
+  profileId,
+  listings,
+}: {
+  profileId: string;
+  listings: DiscoveredListing[];
+}): Promise<void> {
+  if (listings.length === 0) return;
+  const rows = listings.map((listing) => ({
+    profileId,
+    sourceId: null,
+    canonicalUrl: listing.canonicalUrl,
+    fingerprint: buildJobListingFingerprint(listing),
+    title: listing.title,
+    company: listing.company,
+    location: listing.location,
+    employmentType: listing.employmentType ?? null,
+    compensationText: listing.compensationText ?? null,
+    postedAt: listing.postedAt ?? null,
+    matchScore: 0,
+  }));
+  const removals = rows.map((row) =>
+    db
+      .delete(jobListing)
+      .where(
+        and(
+          eq(jobListing.profileId, profileId),
+          eq(jobListing.status, "discovered"),
+          isNull(jobListing.jobId),
+          sql`not exists (select 1 from "job_pipeline_event" where "job_pipeline_event"."listing_id" = ${jobListing.id})`,
+          row.fingerprint
+            ? or(
+                eq(jobListing.canonicalUrl, row.canonicalUrl),
+                eq(jobListing.fingerprint, row.fingerprint),
+              )
+            : eq(jobListing.canonicalUrl, row.canonicalUrl),
+        ),
+      ),
+  );
+  await executeListingBatch([
+    ...removals,
+    ...buildListingRefreshes(profileId, rows),
+  ]);
+}
+
+type ListingRefreshRow = {
+  canonicalUrl: string;
+  fingerprint: string | null;
+  title: string;
+  company: string | null;
+  location: string | null;
+  employmentType: string | null;
+  compensationText: string | null;
+  postedAt: Date | null;
+  matchScore: number;
+};
+
+async function refreshListingRows(
+  profileId: string,
+  rows: ListingRefreshRow[],
+): Promise<void> {
+  await executeListingBatch(buildListingRefreshes(profileId, rows));
+}
+
+function buildListingRefreshes(
+  profileId: string,
+  rows: ListingRefreshRow[],
+): BatchItem<"pg">[] {
+  return rows.map((row) => {
+    const fingerprint = row.fingerprint
+      ? sql<string | null>`case when not exists (
+          select 1 from "job_listing" as "fingerprint_conflict"
+          where "fingerprint_conflict"."profile_id" = ${profileId}
+            and "fingerprint_conflict"."fingerprint" = ${row.fingerprint}
+            and "fingerprint_conflict"."canonical_url" <> ${row.canonicalUrl}
+        ) then ${row.fingerprint} else ${jobListing.fingerprint} end`
+      : undefined;
+
+    return db
+      .update(jobListing)
+      .set({
+        ...(fingerprint !== undefined ? { fingerprint } : {}),
+        title: row.title,
+        company: row.company,
+        location: row.location,
+        employmentType: row.employmentType,
+        compensationText: row.compensationText,
+        postedAt: row.postedAt,
+        matchScore: row.matchScore,
+      })
+      .where(
+        and(
+          eq(jobListing.profileId, profileId),
+          row.fingerprint
+            ? or(
+                eq(jobListing.canonicalUrl, row.canonicalUrl),
+                eq(jobListing.fingerprint, row.fingerprint),
+              )
+            : eq(jobListing.canonicalUrl, row.canonicalUrl),
+        ),
+      );
+  });
+}
+
+async function executeListingBatch(
+  operations: BatchItem<"pg">[],
+): Promise<void> {
+  const first = operations[0];
+  if (!first) return;
+  await db.batch([first, ...operations.slice(1)]);
 }
 
 export async function updateListingStatusForUser({

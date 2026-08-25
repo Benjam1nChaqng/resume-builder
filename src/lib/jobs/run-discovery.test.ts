@@ -5,6 +5,7 @@ const mockGetProfile = vi.fn();
 const mockCreateRun = vi.fn();
 const mockCompleteRun = vi.fn();
 const mockUpsertListings = vi.fn();
+const mockRefreshDisqualifiedListings = vi.fn();
 const mockDiscoverListings = vi.fn();
 const mockAttributeListings = vi.fn();
 const mockFetchFeed = vi.fn();
@@ -15,6 +16,7 @@ vi.mock("./discovery-repo", () => ({
   createDiscoveryRun: mockCreateRun,
   completeDiscoveryRun: mockCompleteRun,
   upsertDiscoveredListings: mockUpsertListings,
+  refreshDisqualifiedListings: mockRefreshDisqualifiedListings,
 }));
 
 vi.mock("./source-adapters", () => ({
@@ -28,6 +30,7 @@ beforeEach(() => {
   mockCreateRun.mockReset();
   mockCompleteRun.mockReset();
   mockUpsertListings.mockReset();
+  mockRefreshDisqualifiedListings.mockReset();
   mockDiscoverListings.mockReset();
   mockAttributeListings.mockReset();
   mockAttributeListings.mockImplementation(
@@ -317,5 +320,92 @@ describe("runJobDiscovery", () => {
       1,
       [expect.objectContaining({ sourceId: "remotive", inserted: 1 })],
     );
+  });
+
+  it("applies the same compensation policy to curated sources and the public feed", async () => {
+    mockGetSources.mockResolvedValueOnce([
+      { id: "source-1", label: "Acme", url: "https://acme.test/careers" },
+    ]);
+    mockGetProfile.mockResolvedValueOnce({
+      candidateName: "Maya",
+      targetRoles: ["support technician"],
+      locationPreference: "California",
+      remotePreference: "any",
+      employmentType: "full_time",
+      salaryMin: null,
+      jobFocus: "professional",
+      experienceLevel: "entry level",
+      keywords: [],
+      exclusions: [],
+      basicJobFilters: {
+        partTime: false,
+        hourly: false,
+        entryLevel: false,
+        retail: false,
+        admin: false,
+        service: false,
+        warehouse: false,
+        internship: false,
+      },
+    });
+    mockCreateRun.mockResolvedValueOnce("run-policy");
+    mockDiscoverListings.mockResolvedValueOnce([
+      {
+        canonicalUrl: "https://acme.test/jobs/low",
+        title: "Support Technician",
+        company: "Acme",
+        location: "California",
+        compensationText: "$70,000 - $79,000 per year",
+      },
+    ]);
+    mockFetchFeed.mockResolvedValueOnce({
+      listings: [
+        {
+          canonicalUrl: "https://remotive.com/jobs/low",
+          title: "Support Technician",
+          company: "Remote Co",
+          location: "Remote",
+          compensationText: "$40 - $49 per hour",
+        },
+      ],
+      error: null,
+    });
+    mockUpsertListings.mockResolvedValue(0);
+
+    const { runJobDiscovery } = await import("./run-discovery");
+    await runJobDiscovery(
+      { profileId: "profile-1", userId: "user-1" },
+      { fetchFeed: mockFetchFeed },
+      { minAnnualSalary: 80_000, minHourlySalary: 50 },
+    );
+
+    expect(mockUpsertListings).toHaveBeenNthCalledWith(1, {
+      profileId: "profile-1",
+      sourceId: "source-1",
+      listings: [],
+    });
+    expect(mockUpsertListings).toHaveBeenNthCalledWith(2, {
+      profileId: "profile-1",
+      sourceId: null,
+      listings: [],
+    });
+    expect(mockRefreshDisqualifiedListings).toHaveBeenNthCalledWith(1, {
+      profileId: "profile-1",
+      listings: [
+        expect.objectContaining({
+          canonicalUrl: "https://acme.test/jobs/low",
+          matchScore: 0,
+        }),
+      ],
+    });
+    expect(mockRefreshDisqualifiedListings).toHaveBeenNthCalledWith(2, {
+      profileId: "profile-1",
+      listings: [
+        expect.objectContaining({
+          canonicalUrl: "https://remotive.com/jobs/low",
+          matchScore: 0,
+        }),
+      ],
+    });
   });
 });

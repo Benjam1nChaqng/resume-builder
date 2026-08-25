@@ -10,6 +10,7 @@ const payload = {
       job_type: "full_time",
       candidate_required_location: "USA",
       salary: "$120,000 - $150,000",
+      publication_date: "2026-08-20T14:30:00Z",
     },
     {
       url: "https://remotive.com/remote-jobs/support/part-time-rep-456",
@@ -38,9 +39,11 @@ describe("normalizeRemotiveJobs", () => {
     });
   });
 
-  it("folds location, job type, and salary into the location line", () => {
+  it("keeps salary separate from location so compensation can be ranked", () => {
     const [first] = normalizeRemotiveJobs(payload, { employmentType: "any" });
-    expect(first.location).toBe("USA | Full-time | $120,000 - $150,000");
+    expect(first.location).toBe("USA | Full-time");
+    expect(first.compensationText).toBe("$120,000 - $150,000");
+    expect(first.postedAt).toEqual(new Date("2026-08-20T14:30:00Z"));
   });
 
   it("filters by employment type when not 'any'", () => {

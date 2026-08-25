@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { resume } from "@/lib/db/resume-schema";
 
@@ -6,9 +6,11 @@ export type RenderableResume = NonNullable<
   Awaited<ReturnType<typeof loadRenderableResume>>
 >;
 
-export async function loadRenderableResume(resumeId: string) {
+export async function loadRenderableResume(resumeId: string, userId?: string) {
   return db.query.resume.findFirst({
-    where: eq(resume.id, resumeId),
+    where: userId
+      ? and(eq(resume.id, resumeId), eq(resume.userId, userId))
+      : eq(resume.id, resumeId),
     with: {
       contactInfo: true,
       experiences: {
@@ -68,4 +70,3 @@ export function resumeToPlainText(data: RenderableResume): string {
   }
   return lines.join("\n").trim();
 }
-

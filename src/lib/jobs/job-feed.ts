@@ -24,6 +24,7 @@ type RemotiveJob = {
   job_type?: unknown;
   candidate_required_location?: unknown;
   salary?: unknown;
+  publication_date?: unknown;
 };
 
 function asString(value: unknown): string | null {
@@ -34,6 +35,12 @@ function humanizeJobType(jobType: string | null): string | null {
   if (!jobType) return null;
   const dashed = jobType.replace(/_/g, "-");
   return dashed.charAt(0).toUpperCase() + dashed.slice(1);
+}
+
+function asDate(value: unknown): Date | null {
+  if (typeof value !== "string") return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 /** Pure: turn a Remotive API payload into our listing shape. */
@@ -71,7 +78,6 @@ export function normalizeRemotiveJobs(
     const location = [
       asString(job.candidate_required_location),
       humanizeJobType(jobType),
-      asString(job.salary),
     ]
       .filter(Boolean)
       .join(" | ");
@@ -81,6 +87,8 @@ export function normalizeRemotiveJobs(
       title: title.slice(0, 180),
       company: asString(job.company_name),
       location: location || null,
+      compensationText: asString(job.salary),
+      postedAt: asDate(job.publication_date),
     });
 
     if (listings.length >= MAX_LISTINGS) break;

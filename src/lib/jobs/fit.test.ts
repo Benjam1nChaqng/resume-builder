@@ -141,4 +141,24 @@ describe("runResumeJobFit", () => {
       }),
     );
   });
+
+  it("scopes direct agent fit execution to the token owner", async () => {
+    mockLimit.mockResolvedValueOnce([jobRow]);
+    mockLoadRenderableResume.mockResolvedValueOnce(null);
+
+    const { runResumeJobFitForUser } = await import("./fit");
+    await expect(
+      runResumeJobFitForUser({
+        userId: "user-1",
+        jobId: "job-1",
+        resumeId: "resume-2",
+      }),
+    ).rejects.toThrow("Resume not found.");
+
+    expect(mockLoadRenderableResume).toHaveBeenCalledWith(
+      "resume-2",
+      "user-1",
+    );
+    expect(mockAnalyzeResumeFit).not.toHaveBeenCalled();
+  });
 });
