@@ -1,7 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import type { RenderableResume } from "./render";
-import { renderResumePdf } from "./resume-pdf";
+import { keepPdfWordUnbroken, renderResumePdf } from "./resume-pdf";
 
 const fixture = {
   id: "resume-1",
@@ -102,6 +102,10 @@ const longFixture = {
 } as unknown as RenderableResume;
 
 describe("renderResumePdf", () => {
+  it("keeps ATS keywords intact instead of inserting hyphenation", () => {
+    expect(keepPdfWordUnbroken("remediation")).toEqual(["remediation"]);
+  });
+
   it("renders structured resume data into non-empty PDF bytes", async () => {
     const pdf = await renderResumePdf(fixture);
 

@@ -1,5 +1,6 @@
 import {
   Document,
+  Font,
   Page,
   StyleSheet,
   Text,
@@ -8,6 +9,12 @@ import {
 } from "@react-pdf/renderer";
 import type { ReactNode } from "react";
 import type { RenderableResume } from "./render";
+
+export function keepPdfWordUnbroken(word: string): string[] {
+  return [word];
+}
+
+Font.registerHyphenationCallback(keepPdfWordUnbroken);
 
 const MONTHS = [
   "Jan",
