@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-28: Added an owner-scoped agent command for structured education and project updates on existing resumes.
 - 2026-08-25: Disabled automatic PDF word hyphenation so ATS text extraction preserves complete resume keywords.
 - 2026-08-25: Fixed salary parsing for employer listings whose annual pay range ends with a USD currency code.
 - 2026-08-24: Added owner-scoped agent discovery and model fit runs with $80,000 annual and $50 hourly floors, stale-listing filtering, compensation-aware persisted ranking, and rediscovery metadata refresh.

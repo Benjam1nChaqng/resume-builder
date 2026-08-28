@@ -8,6 +8,7 @@ function usage() {
   console.error(`Usage:
   pnpm agent context [output.json]
   pnpm agent save-resume <input.json>
+  pnpm agent update-resume <resume-id> <input.json>
   pnpm agent save-fit <input.json>
   pnpm agent run-discovery <input.json>
   pnpm agent run-fit <input.json>
@@ -73,6 +74,21 @@ async function main() {
     const data = await (await request("/api/agent/v1/context")).json();
     if (first) await writeJson(first, data);
     else console.log(JSON.stringify(data, null, 2));
+    return;
+  }
+
+  if (command === "update-resume") {
+    if (!first || !second) {
+      throw new Error("update-resume requires a resume id and input JSON file.");
+    }
+    const response = await request(
+      `/api/agent/v1/resumes/${encodeURIComponent(first)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(await jsonFile(second)),
+      },
+    );
+    console.log(JSON.stringify(await response.json(), null, 2));
     return;
   }
 
