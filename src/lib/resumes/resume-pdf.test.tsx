@@ -101,6 +101,116 @@ const longFixture = {
   ],
 } as unknown as RenderableResume;
 
+function repeatText(seed: string, targetLength: number): string {
+  let value = seed;
+  while (value.length < targetLength) value += ` ${seed}`;
+  return value.slice(0, targetLength).trimEnd();
+}
+
+function pdfPageCount(pdf: Buffer): number {
+  return pdf.toString("latin1").match(/\/Type\s*\/Page\b/g)?.length ?? 0;
+}
+
+const denseOnePageFixture = {
+  ...fixture,
+  title: "IT Specialist Resume",
+  experiences: [
+    {
+      id: "exp-1",
+      resumeId: "resume-1",
+      company: "Managed Services Company",
+      role: "Help Desk Technician I (Promoted)",
+      location: "San Francisco, CA",
+      startDate: "2025-09-01",
+      endDate: null,
+      current: true,
+      sortOrder: 0,
+      bullets: [183, 163, 148, 160].map((length, index) => ({
+        id: `bullet-1-${index}`,
+        experienceId: "exp-1",
+        text: repeatText(
+          "Resolved identity access endpoint and network issues with documented validation",
+          length,
+        ),
+        originalText: null,
+        sortOrder: index,
+      })),
+    },
+    {
+      id: "exp-2",
+      resumeId: "resume-1",
+      company: "Managed Services Company",
+      role: "Telecommunications Technician I",
+      location: "San Francisco, CA",
+      startDate: "2024-07-01",
+      endDate: "2025-08-01",
+      current: false,
+      sortOrder: 1,
+      bullets: [171, 123].map((length, index) => ({
+        id: `bullet-2-${index}`,
+        experienceId: "exp-2",
+        text: repeatText(
+          "Installed switches wireless access points cameras and voice systems with testing",
+          length,
+        ),
+        originalText: null,
+        sortOrder: index,
+      })),
+    },
+  ],
+  educations: [
+    {
+      id: "education-1",
+      resumeId: "resume-1",
+      school: "California State University, East Bay",
+      degree: "Bachelor of Science",
+      field: "Computer Science",
+      startDate: null,
+      endDate: "2026-05-01",
+      gpa: null,
+      sortOrder: 0,
+    },
+    {
+      id: "education-2",
+      resumeId: "resume-1",
+      school: "California State University, Sacramento",
+      degree: null,
+      field: "Dean's Honors List (2021)",
+      startDate: "2021-01-01",
+      endDate: "2022-12-01",
+      gpa: null,
+      sortOrder: 1,
+    },
+  ],
+  projects: [241, 169, 169, 172].map((length, index) => ({
+    id: `project-${index}`,
+    resumeId: "resume-1",
+    name: repeatText("Enterprise IT deployment project", 32 + index * 9),
+    description: repeatText(
+      "Delivered a verified infrastructure rollout with organized assets user support and documented operational handoff",
+      length,
+    ),
+    link: null,
+    sortOrder: index,
+  })),
+  skills: [161, 195, 135, 128, 93].map((length, index) => ({
+    id: `skill-${index}`,
+    resumeId: "resume-1",
+    category: [
+      "Systems Administration",
+      "Security and Access",
+      "Networking",
+      "Tools and Operations",
+      "Coursework",
+    ][index],
+    name: repeatText(
+      "Windows identity endpoint networking troubleshooting documentation",
+      length,
+    ),
+    sortOrder: index,
+  })),
+} as unknown as RenderableResume;
+
 describe("renderResumePdf", () => {
   it("keeps ATS keywords intact instead of inserting hyphenation", () => {
     expect(keepPdfWordUnbroken("remediation")).toEqual(["remediation"]);
@@ -124,5 +234,11 @@ describe("renderResumePdf", () => {
     if (process.env.RESUME_PDF_LONG_OUTPUT) {
       await writeFile(process.env.RESUME_PDF_LONG_OUTPUT, pdf);
     }
+  });
+
+  it("keeps a dense two-role IT resume on one readable page", async () => {
+    const pdf = await renderResumePdf(denseOnePageFixture);
+
+    expect(pdfPageCount(pdf)).toBe(1);
   });
 });

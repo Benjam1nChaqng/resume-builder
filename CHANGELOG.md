@@ -1,5 +1,6 @@
 # Changelog
 
+- 2026-08-28: Kept dense two-role IT resumes on one readable ATS page by tightening vertical spacing without reducing body font size.
 - 2026-08-28: Added an owner-scoped agent command for structured education and project updates on existing resumes.
 - 2026-08-25: Disabled automatic PDF word hyphenation so ATS text extraction preserves complete resume keywords.
 - 2026-08-25: Fixed salary parsing for employer listings whose annual pay range ends with a USD currency code.

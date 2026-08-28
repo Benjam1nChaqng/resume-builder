@@ -37,13 +37,13 @@ const styles = StyleSheet.create({
     color: "#171717",
     fontFamily: "Helvetica",
     fontSize: 9.25,
-    lineHeight: 1.35,
+    lineHeight: 1.3,
     paddingBottom: 32,
     paddingHorizontal: 42,
     paddingTop: 32,
   },
   header: {
-    marginBottom: 14,
+    marginBottom: 12,
     textAlign: "center",
   },
   name: {
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
   },
   section: {
-    marginBottom: 10,
+    marginBottom: 8,
   },
   sectionTitle: {
     borderBottomColor: "#737373",
@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   entry: {
-    marginBottom: 7,
+    marginBottom: 6,
   },
   row: {
     alignItems: "flex-start",
@@ -94,15 +94,15 @@ const styles = StyleSheet.create({
   },
   bullet: {
     marginLeft: 9,
-    marginTop: 2,
+    marginTop: 1,
     paddingLeft: 4,
     textIndent: -7,
   },
   projectDescription: {
-    marginTop: 2,
+    marginTop: 1,
   },
   skillRow: {
-    marginBottom: 2,
+    marginBottom: 1,
   },
 });
 
